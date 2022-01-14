@@ -25,6 +25,8 @@ else:
         training = False
 
 run = True
+first_round = True
+memory = {}
 
 statuses = ["Lobby", "Game", "GameHint"]
 
@@ -35,6 +37,8 @@ hintState = ("", "")
 def manageInput():
     global run
     global status
+    global first_round
+    global memory
 
     # serve a tornare nell'if di show se non vengono ricevute le info di show dopo averle richieste
     requested_show = False
@@ -45,18 +49,23 @@ def manageInput():
 
     while run:
 
-        #aspettiamo che qualcuno faccia una mossa
+        # aspettiamo che qualcuno faccia una mossa
         data = s.recv(DATASIZE)
 
-        #intercettiamo un hint ricevuto per non perderlo
+        # intercettiamo un hint ricevuto per non perderlo
         # DA FARE implementare una memoria locale per gli hint ricevuti
         data = GameData.GameData.deserialize(data)
         if type(data) is GameData.ServerHintData and data.destination == playerName:
             if not training:
                 print("Hint type: " + data.type)
                 print("Player " + data.destination + " cards with value " + str(data.value) + " are:")
+                if not data.value in memory.keys():
+                    memory[data.value] = []
                 for i in data.positions:
+                    memory[data.value].append(i)
                     print("\t" + str(i))
+                print("[" + playerName + " - " + status + "]: ", end="")
+                
 
         # facciamo sempre uno show per 1) sapere se tocca a noi 2) se tocca a noi, aggiornare gli stati
         s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
@@ -68,10 +77,11 @@ def manageInput():
         # aggiorniamo gli stati DA FARE
         if type(data) is GameData.ServerGameStateData:
             requested_show = False
-            #se non tocca a noi, torniamo su e continuiamo ad aspettare
+            # se non tocca a noi, torniamo su e continuiamo ad aspettare
             if data.currentPlayer != playerName:
                 continue
-            if not training:
+            elif not training:
+                print("show")
                 print("Current player: " + data.currentPlayer)
                 print("Player hands: ")
                 for p in data.players:
@@ -87,6 +97,18 @@ def manageInput():
                     print("\t" + c.toClientString())            
                 print("Note tokens used: " + str(data.usedNoteTokens) + "/8")
                 print("Storm tokens used: " + str(data.usedStormTokens) + "/3")
+                print("[" + playerName + " - " + status + "]: ", end="")
+
+                for p in data.players:
+                    if (p.name != playerName):
+                        for c in p.hand:
+                            if (c.value == 1 and first_round):
+                                first_round = False
+                                print('hint value '+p.name+' 1')
+                                s.send(GameData.ClientHintData(playerName, p.name, 'value', 1).serialize())
+                
+                #if (data.currentPlayer == 'albo'):
+                #    s.send(GameData.ClientHintData(playerName, 'steo', 'value', 1).serialize())
         # se lo show è stato richiesto ma è stato perso, lo richiediamo
         elif requested_show:
             s.send(GameData.ClientGetGameStateRequest(playerName).serialize())

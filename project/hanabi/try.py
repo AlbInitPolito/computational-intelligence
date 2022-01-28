@@ -1,19 +1,11 @@
+import numpy as np
+import random
+
 class card:
     def __init__(self, id, value, color):
         self.id = id
         self.value = value
         self.color = color
-
-hand = [card(0,1,'red'),card(0,1,'blue'),card(0,4,'red'),card(0,0,0),card(0,0,0)]
-
-state = { 'tableCards': {
-          'red': [card(0,1,'red'),card(0,2,'red')],
-          'blue': [card(0,1,'blue')],
-          'yellow': [],
-          'green': [],
-          'white': [],
-          }
-    }
 
 def checkPlayableCard(state,playerHand): # check if there is a known n+1 card in hand wrt the same color n card on table
     for c in playerHand:
@@ -31,8 +23,8 @@ class card:
         self.value = value
         self.color = color
 
-hand = [card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None)]
-steohand = [card(0,2,'white'),card(0,2,'green'),card(0,5,'green'),card(0,4,'red'),card(0,2,'yellow')]
+hand = [card(0,1,None),card(0,2,'blue'),card(0,0,None),card(0,3,None),card(0,0,None)]
+steohand = [card(0,2,'white'),card(0,2,'green'),card(0,5,'green'),card(0,4,'red'),card(0,4,'yellow')]
 
 tableCards = {
           'red': [card(0,1,'red'),card(0,2,'red')],
@@ -157,4 +149,118 @@ def getQrow(state,playerHand): #gives an integer corresponding to the T-table ro
                checkPlayerHasFoldable(state), checkStormTokens(state) ] + [i for i in checkRemainingHints(state)]
     return sum([checks[i]*(2**i) for i in range(8)])
 
-print(getQrow(act_state, hand))
+#print(getQrow(act_state, hand))
+
+def chooseCardToPlay(state,playerHand): #return card index to play
+    score = [0,0,0,0,0]
+    for c in playerHand:
+        if c.value!=0:
+            for color in state.tableCards:
+                if max([i.value for i in state.tableCards[color]],default=0) == (c.value-1):
+                    score[playerHand.index(c)] += 1
+                    if color==c.color:
+                        score[playerHand.index(c)] += 5
+        if c.color!=None:
+            if len(state.tableCards[c.color])==0:
+                score[playerHand.index(c)] += 1 
+        for p in state.players:
+            if p.name == state.currentPlayer:
+                continue
+            for d in p.hand: #each card in player p hand
+                if d.value==c.value+1 and d.color==c.color:
+                    score[playerHand.index(c)] += 1
+        if c.value==1:
+            score[playerHand.index(c)] += 1
+
+    best = max(score)
+    npscore = np.array(score)
+    playable = np.where(npscore==best)[0].tolist()
+    ind = random.randint(0,len(playable)-1)
+    print(score)
+    return playable[ind]
+
+    
+#print(chooseCardToPlay(act_state,hand))
+
+def chooseCardToHint(state,playerHand):
+    scores = {}
+    for i in state.players:
+        if i.name==state.currentPlayer:
+            continue
+        numbs = {i:0 for i in list(set([c.value for c in i.hand])) }
+        cols = {i:0 for i in list(set([c.color for c in i.hand])) } # takes any owned color and transforms in {color: 0}
+        scores.update({i.name: {'numbers': numbs, 'colors': cols}})
+    
+    for p in state.players:
+        for c in p.hand:
+            if max([i.value for i in state.tableCards[c.color]],default=0) == (c.value-1):
+                    scores[p.name]['numbers'][c.value] += 5
+                    scores[p.name]['colors'][c.color] += 5
+            for d in playerHand:
+                if d.value==0 or d.color==None:
+                    continue
+                if c.color==d.color and (c.value==d.value-1 or c.value==d.vale+1):
+                    scores[p.name]['numbers'][c.value] += 1
+                    scores[p.name]['colors'][c.color] += 1
+                if c.color==d.color and c.value==d.value:
+                    scores[p.name]['numbers'][c.value] += 5
+                    scores[p.name]['colors'][c.color] += 5
+            for q in state.players:
+                if q.name==p.name:
+                    continue
+                for d in q.hand:
+                    if d.value==0 or d.color==None:
+                        continue
+                    if c.color==d.color and (c.value==d.value-1 or c.value==d.vale+1):
+                        scores[p.name]['numbers'][c.value] += 1
+                        scores[p.name]['colors'][c.color] += 1
+                    if c.color==d.color and c.value==d.value:
+                        scores[p.name]['numbers'][c.value] += 5
+                        scores[p.name]['colors'][c.color] += 5
+            dist = c.value - max([i.value for i in state.tableCards[c.color]],default=0)
+            if dist>0:
+                scores[p.name]['numbers'][c.value] += dist
+                scores[p.name]['colors'][c.color] += dist
+            if c.value==1:
+                scores[p.name]['numbers'][c.value] += 1
+            if len(state.tableCards[c.color])>0:
+                scores[p.name]['colors'][c.color] += 1
+            dupCheck = [i for i in p.hand if i.value==c.value and i.color==c.color]
+            if len(dupCheck)==2 or max([i.value for i in state.tableCards[c.color]],default=0) >= c.value or \
+                                len([i for i in state.discardPile if i.color==c.color and i.value==c.value])>0:
+                scores[p.name]['numbers'][c.value] += 10
+                scores[p.name]['colors'][c.color] += 10
+
+    max_n = {'player': None, 'value': 0, 'points': -1}
+    max_c = {'player': None, 'color': None, 'points': -1}
+
+    for s in scores:
+        key_list=list(scores[s]['numbers'].keys()) #all numbers
+        val_list=list(scores[s]['numbers'].values()) #all points
+        hintable = np.where(np.array(val_list)==max(val_list))[0].tolist()
+        ind = hintable[random.randint(0,len(hintable)-1)]
+        if val_list[ind] > max_n['points']: # if better then last found
+            max_n['player'] = p.name
+            max_n['points'] = val_list[ind] #associated points
+            max_n['value'] = key_list[ind] # extracted number
+
+        key_list=list(scores[s]['colors'].keys()) #all colors
+        val_list=list(scores[s]['colors'].values()) #all points
+        hintable = np.where(np.array(val_list)==max(val_list))[0].tolist()
+        ind = hintable[random.randint(0,len(hintable)-1)]
+        if val_list[ind] > max_c['points']: # if better then last found
+            max_c['player'] = p.name
+            max_c['points'] = val_list[ind] #associated points
+            max_c['color'] = key_list[ind] # extracted color
+
+        print(scores)
+
+    if max_n['points']>max_c['points']:
+        return max_n
+    elif max_n['points']<max_c['points']:
+        return max_c
+    elif random.randint(0,1):
+        return max_n
+    return max_c
+
+print(chooseCardToHint(act_state,hand))

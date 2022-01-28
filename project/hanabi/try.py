@@ -52,12 +52,34 @@ players = [ player('albo',[]), player('steo',steohand) ]
 discardPile = [ card(0,1,'red'), card(0,1,'white'), card(0,5,'white') ]
 
 class state:
-    def __init__(self, tableCards, players, discardPile):
+    def __init__(self, tableCards, players, discardPile, currentPlayer, usedNoteTokens, usedStormTokens):
         self.tableCards=tableCards
         self.players=players
         self.discardPile=discardPile
+        self.currentPlayer=currentPlayer
+        self.usedNoteTokens=usedNoteTokens
+        self.usedStormTokens=usedStormTokens
         
-act_state = state(tableCards,players,discardPile)
+act_state = state(tableCards,players,discardPile, 'albo', 0, 0)
+
+def checkPlayedOne(state,playerHand): # check if there is a known 1 card that has never been played
+    for c in playerHand:
+        if c.value==1:
+            if c.color==None:
+                continue
+            if len(state.tableCards[c.color])==0:
+                return True
+    return False
+
+def checkPlayableCard(state,playerHand): # check if there is a known n+1 card in hand wrt the same color n card on table
+    for c in playerHand:
+        if c.value==0:
+            continue
+        if c.color==None:
+            continue
+        if max([i.value for i in state.tableCards[c.color]],default=0) == (c.value-1):
+            return True
+    return False
 
 def checkFoldableCard(state,playerHand,player): # check if there is a foldable card
 
@@ -101,10 +123,38 @@ def checkFoldableCard(state,playerHand,player): # check if there is a foldable c
 
     return False
 
-def checkPlayerHasFoldable(state):
+def checkPlayerHasPlayable(state): #check if any player has a playable card
+    for p in state.players:
+        if checkPlayableCard(state,p.hand):
+            return True
+    return False
+
+def checkPlayerHasFoldable(state): #check if any player has a foldable card
     for p in state.players:
         if checkFoldableCard(state,p.hand,p.name):
             return True
     return False
 
-print(checkPlayerHasFoldable(act_state))
+def checkRemainingHints(state): #check remaining hint tokens
+    if state.usedNoteTokens==0:
+        return True,True
+    elif state.usedNoteTokens<4:
+        return True,False
+    elif state.usedNoteTokens<7:
+        return False,True
+    else:
+        return False,False
+
+def checkStormTokens(state): #check how many errors
+    if state.usedStormTokens<2:
+        return False
+    else:
+        return True
+
+def getQrow(state,playerHand): #gives an integer corresponding to the T-table row
+    checks = [ checkPlayedOne(state,playerHand), checkPlayableCard(state,playerHand), 
+               checkFoldableCard(state,playerHand,state.currentPlayer), checkPlayerHasPlayable(state),
+               checkPlayerHasFoldable(state), checkStormTokens(state) ] + [i for i in checkRemainingHints(state)]
+    return sum([checks[i]*(2**i) for i in range(8)])
+
+print(getQrow(act_state, hand))

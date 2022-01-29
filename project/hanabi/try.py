@@ -7,41 +7,23 @@ class card:
         self.value = value
         self.color = color
 
-def checkPlayableCard(state,playerHand): # check if there is a known n+1 card in hand wrt the same color n card on table
-    for c in playerHand:
-        if c.value==0:
-            continue
-        if c.color==None:
-            continue
-        if max([i.value for i in state['tableCards'][c.color]]) == (c.value-1):
-            return True
-    return False
-
-class card:
-    def __init__(self, id, value, color):
-        self.id = id
-        self.value = value
-        self.color = color
-
-hand = [card(0,1,None),card(0,2,'blue'),card(0,0,None),card(0,3,None),card(0,0,None)]
-steohand = [card(0,2,'white'),card(0,2,'green'),card(0,5,'green'),card(0,4,'red'),card(0,4,'yellow')]
-
+hand = [card(0,3,'yellow'),card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None)]
+steohand = [card(0,3,'yellow'),card(0,4,'white'),card(0,2,'green'),card(0,2,'red'),card(0,1,'blue')]
 tableCards = {
-          'red': [card(0,1,'red'),card(0,2,'red')],
-          'blue': [card(0,1,'blue')],
+          'red': [],
+          'blue': [],
           'yellow': [],
-          'green': [card(0,1,'green'),card(0,2,'green')],
+          'green': [],
           'white': [],
           }
-    
+discardPile = [ card(0,1,'red'), card(0,1,'white'), card(0,5,'white') ]
+
 class player:
     def __init__(self, name, hand):
         self.name = name
         self.hand = hand
         
 players = [ player('albo',[]), player('steo',steohand) ]
-
-discardPile = [ card(0,1,'red'), card(0,1,'white'), card(0,5,'white') ]
 
 class state:
     def __init__(self, tableCards, players, discardPile, currentPlayer, usedNoteTokens, usedStormTokens):
@@ -176,11 +158,10 @@ def chooseCardToPlay(state,playerHand): #return card index to play
     npscore = np.array(score)
     playable = np.where(npscore==best)[0].tolist()
     ind = random.randint(0,len(playable)-1)
-    print(score)
     return playable[ind]
 
     
-#print(chooseCardToPlay(act_state,hand))
+print("Card to play - index: ", chooseCardToPlay(act_state,hand))
 
 def chooseCardToHint(state,playerHand):
     scores = {}
@@ -199,7 +180,7 @@ def chooseCardToHint(state,playerHand):
             for d in playerHand:
                 if d.value==0 or d.color==None:
                     continue
-                if c.color==d.color and (c.value==d.value-1 or c.value==d.vale+1):
+                if c.color==d.color and (c.value==d.value-1 or c.value==d.value+1):
                     scores[p.name]['numbers'][c.value] += 1
                     scores[p.name]['colors'][c.color] += 1
                 if c.color==d.color and c.value==d.value:
@@ -230,6 +211,8 @@ def chooseCardToHint(state,playerHand):
                                 len([i for i in state.discardPile if i.color==c.color and i.value==c.value])>0:
                 scores[p.name]['numbers'][c.value] += 10
                 scores[p.name]['colors'][c.color] += 10
+            if c.value == 5:
+                scores[p.name]['numbers'][c.value] += 5
 
     max_n = {'player': None, 'value': 0, 'points': -1}
     max_c = {'player': None, 'color': None, 'points': -1}
@@ -253,14 +236,69 @@ def chooseCardToHint(state,playerHand):
             max_c['points'] = val_list[ind] #associated points
             max_c['color'] = key_list[ind] # extracted color
 
-        print(scores)
-
     if max_n['points']>max_c['points']:
         return max_n
     elif max_n['points']<max_c['points']:
         return max_c
-    elif random.randint(0,1):
-        return max_n
+    else:
+        h1 = list(filter(lambda p: p.name == max_n['player'], state.players))[0].hand
+        h2 = list(filter(lambda p: p.name == max_c['player'], state.players))[0].hand
+        if len([i for i in h1 if i.value == max_n['value']]) > \
+           len([i for i in h2 if i.color== max_c['color']]):
+            return max_n
+        elif len([i for i in h1 if i.value == max_n['value']]) < \
+             len([i for i in h2 if i.color == max_c['color']]):
+            return max_c
+        elif random.randint(0,1):
+            return max_n
     return max_c
 
-print(chooseCardToHint(act_state,hand))
+print("Cards to hint: ", chooseCardToHint(act_state, hand))
+
+def chooseCardToDiscard(state, playerHand):
+    score = [0,0,0,0,0]
+    for c in playerHand:
+        if c.value!=0 and c.color!=None:
+            dupCheck = [i for i in playerHand if i.value==c.value and i.color==c.color]
+            if (len(dupCheck) >= 2) or max([i.value for i in state.tableCards[c.color]], default=0) >= c.value:
+                score[playerHand.index(c)] += 10
+            if (len([i for i in state.discardPile if i.color==c.color and i.value==c.value]) >0):
+                score[playerHand.index(c)] -= 10
+            for p in state.players:
+                chk = 0
+                if (p.name == state.currentPlayer):
+                    continue
+                for d in p.hand:
+                    if (d.value == c.value+1 and d.color == c.color): 
+                        score[playerHand.index(c)] -= 1
+                        chk += 1
+                    if (d.value == c.value and d.color == c.color):
+                        score[playerHand.index(c)] += 1
+                        chk += 1
+                if (chk > 1): #if both conditions above met, break the entire cycle
+                    break
+            for color in state.tableCards:
+                if (max([i.value for i in state.tableCards[color]], default=0) == (c.value-1)):
+                    score[playerHand.index(c)] -= 1
+                    if (color == c.color):
+                        score[playerHand.index(c)] -= 5
+        if c.color != None:
+            if (len(state.tableCards[c.color]) > 0):
+                score[playerHand.index(c)] -= 1
+        if c.value == 1:
+            score[playerHand.index(c)] -= 1        
+        if c.color!=None:
+            if len(state.tableCards[c.color])==0:
+                score[playerHand.index(c)] -= 1 
+        if c.value==1:
+            score[playerHand.index(c)] -= 1
+        if c.value==5:
+            score[playerHand.index(c)] -= 10
+
+    best = max(score)
+    npscore = np.array(score)
+    playable = np.where(npscore==best)[0].tolist()
+    ind = random.randint(0,len(playable)-1)
+    return playable[ind]
+
+print("Card to discard - index: ", chooseCardToDiscard(act_state,hand))

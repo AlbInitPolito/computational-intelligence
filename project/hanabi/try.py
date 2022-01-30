@@ -1,5 +1,8 @@
+from tabnanny import check
 import numpy as np
 import random
+import Qprocess as qp
+import checks
 
 class card:
     def __init__(self, id, value, color):
@@ -7,8 +10,13 @@ class card:
         self.value = value
         self.color = color
 
-hand = [card(0,3,'yellow'),card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None)]
+hand = [card(0,2,'yellow'),card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None)]
 steohand = [card(0,3,'yellow'),card(0,4,'white'),card(0,2,'green'),card(0,2,'red'),card(0,1,'blue')]
+
+hand2 = [card(0,3,'yellow'),card(0,1,'yellow'),card(0,5,'blue'),card(0,4,'red'),card(0,3,'blue')]
+steohand2 = [card(0,0,None),card(0,4,None),card(0,2,'green'),card(0,0,None),card(0,1,None)]
+
+steohand3 = [card(0,3,'yellow'),card(0,4,'white'),card(0,2,'green'),card(0,2,'red'),card(0,5,'yellow')]
 tableCards = {
           'red': [],
           'blue': [],
@@ -16,6 +24,13 @@ tableCards = {
           'green': [],
           'white': [],
           }
+tableCards3 = {
+'red': [],
+'blue': [card(0,1,'blue')],
+'yellow': [],
+'green': [],
+'white': [],
+}
 discardPile = [ card(0,1,'red'), card(0,1,'white'), card(0,5,'white') ]
 
 class player:
@@ -24,6 +39,8 @@ class player:
         self.hand = hand
         
 players = [ player('albo',[]), player('steo',steohand) ]
+players2 = [ player('albo',hand2), player('steo',[]) ]
+players3 = [ player('albo',[]), player('steo',steohand3) ]
 
 class state:
     def __init__(self, tableCards, players, discardPile, currentPlayer, usedNoteTokens, usedStormTokens):
@@ -35,6 +52,8 @@ class state:
         self.usedStormTokens=usedStormTokens
         
 act_state = state(tableCards,players,discardPile, 'albo', 0, 0)
+act_state2 = state(tableCards, players2,discardPile, 'steo', 1, 0)
+act_state3 = state(tableCards3, players3, discardPile, 'albo', 1, 0)
 
 def checkPlayedOne(state,playerHand): # check if there is a known 1 card that has never been played
     for c in playerHand:
@@ -161,7 +180,7 @@ def chooseCardToPlay(state,playerHand): #return card index to play
     return playable[ind]
 
     
-print("Card to play - index: ", chooseCardToPlay(act_state,hand))
+#print("Card to play - index: ", chooseCardToPlay(act_state,hand))
 
 def chooseCardToHint(state,playerHand):
     scores = {}
@@ -253,7 +272,7 @@ def chooseCardToHint(state,playerHand):
             return max_n
     return max_c
 
-print("Cards to hint: ", chooseCardToHint(act_state, hand))
+#print("Cards to hint: ", chooseCardToHint(act_state, hand))
 
 def chooseCardToDiscard(state, playerHand):
     score = [0,0,0,0,0]
@@ -301,4 +320,16 @@ def chooseCardToDiscard(state, playerHand):
     ind = random.randint(0,len(playable)-1)
     return playable[ind]
 
-print("Card to discard - index: ", chooseCardToDiscard(act_state,hand))
+#print("Card to discard - index: ", chooseCardToDiscard(act_state,hand))
+
+#qp.QTableFrom0()
+#print(qp.loadQTableFromFile('Q-table-0.npy'))
+while True:
+    index = checks.getQrow(act_state, hand)
+    #print(index)
+    move1 = chooseCardToHint(act_state, hand)
+    reward = 5
+    move2 = chooseCardToPlay(act_state2, steohand2)
+    nextIndex = checks.getQrow(act_state3, hand)
+    qp.updateQTable(index, nextIndex, 1, reward, path='Q-table-0.npy')
+    print(qp.loadQTableFromFile('Q-table-0.npy')[200])

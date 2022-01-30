@@ -51,6 +51,11 @@ def checkFoldableCard(state,playerHand,player): # check if there is a foldable c
         if c.color==None:
             continue
 
+        if c.value==1:
+            checkOnes = [i for i in state.discardPile if i.value==1 and i.color==c.color]
+            if len(checkOnes)==2:
+                continue
+
         chk = True
         for d in state.discardPile:
             if c.value==d.value and c.color==d.color:
@@ -65,7 +70,7 @@ def checkFoldableCard(state,playerHand,player): # check if there is a foldable c
     for c in notInDiscardPile:
         #dupCheck is a list to check if c has duplicate in hand
         dupCheck = [i for i in notInDiscardPile if i.value==c.value and i.color==c.color]
-        if len(dupCheck)==2:
+        if len(dupCheck)>=2:
             return True
 
         #check if another player has the same card
@@ -189,7 +194,7 @@ def chooseCardToHint(state,playerHand):
             if len(state.tableCards[c.color])>0:
                 scores[p.name]['colors'][c.color] += 1
             dupCheck = [i for i in p.hand if i.value==c.value and i.color==c.color]
-            if len(dupCheck)==2 or max([i.value for i in state.tableCards[c.color]],default=0) >= c.value or \
+            if len(dupCheck)>=2 or max([i.value for i in state.tableCards[c.color]],default=0) >= c.value or \
                                 len([i for i in state.discardPile if i.color==c.color and i.value==c.value])>0:
                 scores[p.name]['numbers'][c.value] += 10
                 scores[p.name]['colors'][c.color] += 10
@@ -281,9 +286,51 @@ def chooseCardToDiscard(state, playerHand):
     ind = random.randint(0,len(playable)-1)
     return playable[ind]
 
-        
+def computeDiscardReward(state,card,known_card,playerHand):
+    reward = 0
+    last = state.tableCards[card.color][-1]
+    if last.value >= card.value:
+        reward += 3
+    elif last.value == card.value-1:
+        reward -= 3
+    else:
+        reward -= 1
+    discarded_cards = [i for i in state.discardPile if i.color == card.color and i.value == card.value]
+    if card.value == 1 and len(discarded_cards) == 3:
+        reward -= 10
+    elif len(discarded_cards)==2 and card.value != 1:
+        reward -= 10
+    if card.value == 5:
+        reward -= 10
+    if known_card.color == None:
+        reward -= 1
+    if known_card.value == 0:
+        reward -= 1
+    # used tokens: (1 2 3 4 5 6 7 8 -> -1 0 1 2 3 4 5 6)
+    reward += state.usedNoteTokens-2
+    complete = [i for i in playerHand if i.color and i.value]
+    add_reward = 0
+    for i in complete:
+        last = state.tableCards[i.color][-1]
+        if last.value == i.value-1:
+            add_reward -= 1
+    if not add_reward:
+        reward += 3
+    
+    return reward
 
-
-        
-
-            
+def computeHintReward(state,hint,playerHand):
+    reward = 0
+    complete = [i for i in playerHand if i.color and i.value]
+    for i in complete:
+        last = state.tableCards[i.color][-1]
+        if last.value == i.value-1:
+            reward -= 2
+            break
+    if not reward:
+        reward += 2
+    for c in playerHand:
+        dupCheck = [i for i in playerHand if i.value==c.value and i.color==c.color]
+            if len(dupCheck)>=2:
+                return True
+                #todo

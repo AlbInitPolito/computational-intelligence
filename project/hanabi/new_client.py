@@ -9,6 +9,8 @@ import os
 import checks as ck
 import Qprocess as qp
 import game
+import time
+import select
 
 training = ''
 
@@ -22,8 +24,9 @@ else:
     playerName = argv[3]
     ip = argv[1]
     port = int(argv[2])
+    training = ''
     if len(argv) == 5:
-        #attiva la modalità di training se Vero, gli output se Falso
+        #attiva una modalità di training o meno
         training = argv[4]
         # 'pre' for pretraining, take actions as keyboard input, but update q-table
         # 'self' for self q-learning, choose actions from q-table and update q-table
@@ -33,39 +36,51 @@ statuses = ["Lobby", "Game", "GameHint"]
 
 status = statuses[0]
 
-hintState = ("", "") # ????????? todo
+hintState = ("", "") # ????????? todo        
 
 def manageInput():
     global status
     global training
 
+    time.sleep(2.0)
+
     run = True
     first_round = True
 
-    memory = [ game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None) ] # known cards -> 5 card 
+    Qtable = qp.loadQTableFromFile() # list of size (256,3)
 
+    index = -1
+
+    memory = [ game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None) ] # known cards -> 5 card 
 
     # serve a tornare nell'if di show se non vengono ricevute le info di show dopo averle richieste
     requested_show = False
+
+    #s.setblocking(0) #todo????
+    ready = select.select([s], [], [], 3.0)
 
     # show inutile: ci serve solo per attivare la prima volta s.recv
     s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
     requested_show = True
 
-    Qtable = qp.loadQTableFromFile() # list of size (256,3)
-
     while run:
 
+        reward = 0
+
         # aspettiamo che qualcuno faccia una mossa
-        data = s.recv(DATASIZE)
+        if ready[0]:
+            data = s.recv(DATASIZE)
+        else:
+            break
 
         # intercettiamo gli hint per non perderli
         data = GameData.GameData.deserialize(data)
         if type(data) is GameData.ServerHintData:
-            print("Hint type: " + data.type)
-            print("Player " + data.destination + " cards with value " + str(data.value) + " are:")
-            for i in data.positions:
-                print("\t" + str(i))
+            if training != 'self' and training != 'pre':
+                print("Hint type: " + data.type)
+                print("Player " + data.destination + " cards with value " + str(data.value) + " are:")
+                for i in data.positions:
+                    print("\t" + str(i))
 
             if data.destination == playerName: #if hint is for us, update our memory
                 for i in data.positions:
@@ -78,9 +93,21 @@ def manageInput():
                 print("Owned cards:")
                 for i in memory: #print our memory
                     print(i.toClientString())
-        
+
             print()
             print("[" + playerName + " - " + status + "]: ", end="")
+            print()
+        
+        elif type(data) is GameData.ServerGameOver:
+            print()
+            print(data.message)
+            print(data.score)
+            print(data.scoreMessage)
+            if training != 'self' and training != 'pre':
+                print("Ready for a new game!")
+            print()
+            stdout.flush()
+            break
 
         # facciamo sempre uno show per 1) sapere se tocca a noi 2) se tocca a noi, aggiornare gli stati
         s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
@@ -117,31 +144,29 @@ def manageInput():
                     print()
                     print("[" + playerName + " - " + status + "]: ", end="")
 
-                index = -1
-
                 next_index = ck.getQrow(data,memory) #update for previous play depends on its state and the new state
-               
+                
                 #choose a move
                 if training == 'pre': # if pre-training, input the move
                     move = input() # must be play, hint or discard
-                    while move not in ['play', 'hint', 'discard']:
+                    while move not in ['play', 'hint', 'discard'] or (move=='hint' and data.usedNoteTokens==8):
                         print("you must specify only play, hint or discard!")
                         move = input()
                     continue
                 else: #if training or simply playin, choose move from q-table
-                    move = qp.readQTable(Qtable,next_index)
-                    if move==0:
-                        move = 'play'
-                    elif move==1:
-                        move = 'hint'
-                    elif move==2:
-                        move = 'discard'
-                    else:
+                    canHint = True
+                    canFold = True
+                    if data.usedNoteTokens==8:
+                        canHint = False
+                    elif data.usedNoteTokens==0:
+                        canFold = False
+                    move = qp.readQTable(Qtable,next_index,canHint,canFold)
+                    if move not in [0,1,2]:
                         print("move error: ", move)
                         exit
 
-                # execute the move
-                if move == 'play':
+                # execute the move play
+                if move == 0:
                     index = ck.chooseCardToPlay(data,memory) #choose card to play
                     s.send(GameData.ClientPlayerPlayCardRequest(playerName, index).serialize())
                     data = s.recv(DATASIZE)
@@ -170,7 +195,11 @@ def manageInput():
                         print()
                     memory.append(game.Card(0,0,None))
 
-                elif move == 'hint':
+                    print("[" + playerName + " - " + status + "]: ", end="")
+                    print()
+
+                #execute the move hint
+                elif move == 1:
                     hint = ck.chooseCardToHint(data,memory)
                     if 'value' in hint:
                         value = hint['value']
@@ -178,12 +207,23 @@ def manageInput():
                     else:
                         value = hint['color']
                         t = 'color'
+                    hint = {'player': hint['player'], 'value': value, 'type': t} 
+
+                    #collect the reward
+                    reward = ck.computeHintReward(data,hint,memory)
+
+                    #execute the hint
                     s.send(GameData.ClientHintData(playerName, hint['player'], t, value).serialize())
 
-                    
+                    print()
+                    print(data.currentPlayer)
+                    print("[" + playerName + " - " + status + "]: ", end="")
+                    print()
 
                     continue
-                else: #discard
+
+                #execute the move discard
+                else:
                     index = ck.chooseCardToDiscard(data,memory)
                     s.send(GameData.ClientPlayerDiscardCardRequest(playerName, index).serialize())
 
@@ -229,72 +269,28 @@ def manageInput():
                         print()
                     memory.append(game.Card(0,0,None))
 
-                if not first_round:
+                    print(data.currentPlayer)
+                    print("[" + playerName + " - " + status + "]: ", end="")
+                    print()
+
+                if first_round:
+                    first_round = False
                     continue
                         
+                # index, next_index, reward, move
 
+                qp.updateQTable(index,next_index,move,reward)
 
                 # dopo il primo round, possiamo iniziare ad aggiornare la Q-table
                 index = next_index
-                first_round = False
 
         # se lo show è stato richiesto ma è stato perso, lo richiediamo
         elif requested_show:
             s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
             continue
 
-        ##executed after any behavior
 
 
-        continue
-
-        command = input()
-        # Choose data to send
-        if command == "show" and status == statuses[1]:
-            s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
-        elif command.split(" ")[0] == "discard" and status == statuses[1]:
-            try:
-                cardStr = command.split(" ")
-                cardOrder = int(cardStr[1])
-                s.send(GameData.ClientPlayerDiscardCardRequest(playerName, cardOrder).serialize())
-            except:
-                print("Maybe you wanted to type 'discard <num>'?")
-                continue
-        elif command.split(" ")[0] == "play" and status == statuses[1]:
-            try:
-                cardStr = command.split(" ")
-                cardOrder = int(cardStr[1])
-                s.send(GameData.ClientPlayerPlayCardRequest(playerName, cardOrder).serialize())
-            except:
-                print("Maybe you wanted to type 'play <num>'?")
-                continue
-        elif command.split(" ")[0] == "hint" and status == statuses[1]:
-            try:
-                destination = command.split(" ")[2]
-                t = command.split(" ")[1].lower()
-                if t != "colour" and t != "color" and t != "value":
-                    print("Error: type can be 'color' or 'value'")
-                    continue
-                value = command.split(" ")[3].lower()
-                if t == "value":
-                    value = int(value)
-                    if int(value) > 5 or int(value) < 1:
-                        print("Error: card values can range from 1 to 5")
-                        continue
-                else:
-                    if value not in ["green", "red", "blue", "yellow", "white"]:
-                        print("Error: card color can only be green, red, blue, yellow or white")
-                        continue
-                s.send(GameData.ClientHintData(playerName, destination, t, value).serialize())
-            except:
-                print("Maybe you wanted to type 'hint <type> <destinatary> <value>'?")
-                continue
-        elif command == "":
-            print("[" + playerName + " - " + status + "]: ", end="")
-        else:
-            print("Unknown command: " + command)
-            continue
-        stdout.flush()
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     request = GameData.ClientPlayerAddData(playerName)

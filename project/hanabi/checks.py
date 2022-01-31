@@ -20,6 +20,9 @@ from calendar import c
 from configparser import MAX_INTERPOLATION_DEPTH
 import numpy as np
 import random
+import game
+
+from sklearn.linear_model import ElasticNet
 
 def checkPlayedOne(state,playerHand): # check if there is a known 1 card that has never been played
     for c in playerHand:
@@ -228,6 +231,7 @@ def chooseCardToHint(state,playerHand):
     elif max_n['points']<max_c['points']:
         return max_c
     else:
+        # todo check list index out of range ?
         h1 = list(filter(lambda p: p.name == max_n['player'], state.players))[0].hand
         h2 = list(filter(lambda p: p.name == max_c['player'], state.players))[0].hand
         if len([i for i in h1 if i.value == max_n['value']]) > \
@@ -288,7 +292,10 @@ def chooseCardToDiscard(state, playerHand):
 
 def computeDiscardReward(state,card,known_card,playerHand):
     reward = 0
-    last = state.tableCards[card.color][-1]
+    if len(state.tableCards[card.color]) == 0:
+        last = game.Card(0,0,card.color)
+    else:
+        last = state.tableCards[card.color][-1]
     if last.value >= card.value:
         reward += 3
     elif last.value == card.value-1:
@@ -311,7 +318,10 @@ def computeDiscardReward(state,card,known_card,playerHand):
     complete = [i for i in playerHand if i.color and i.value]
     add_reward = 0
     for i in complete:
-        last = state.tableCards[i.color][-1]
+        if len(state.tableCards[card.color]) == 0:
+            last = game.Card(0,0,card.color)
+        else:
+            last = state.tableCards[i.color][-1]
         if last.value == i.value-1:
             add_reward -= 1
     if not add_reward:
@@ -323,14 +333,59 @@ def computeHintReward(state,hint,playerHand):
     reward = 0
     complete = [i for i in playerHand if i.color and i.value]
     for i in complete:
-        last = state.tableCards[i.color][-1]
+        if len(state.tableCards[i.color]) == 0:
+            last = game.Card(0,0,i.color)
+        else:
+            last = state.tableCards[i.color][-1]
         if last.value == i.value-1:
             reward -= 2
             break
     if not reward:
         reward += 2
     for c in playerHand:
-        dupCheck = [i for i in playerHand if i.value==c.value and i.color==c.color]
-            if len(dupCheck)>=2:
-                return True
-                #todo
+        if c.value and c.color:
+            dupCheck = [i for i in playerHand if i.value==c.value and i.color==c.color]
+            if len(state.tableCards[c.color]) == 0:
+                last = game.Card(0,0,c.color)
+            else:
+                last = state.tableCards[c.color][-1]
+            if len(dupCheck)>=2 or last.value >= c.value:
+                reward -= 2
+                break
+    reward += 2-state.usedNoteTokens # (7 6 5 4 3 2 1 0) -> (-5 -4 -3 -2 -1 0 +1 +2)
+    hintedPlayerHand = list(filter(lambda p: p.name == hint['player'], state.players))[0].hand
+    # hint = {'player': hint['player'], 'value': value, 'type': t}
+    if hint['type'] == 'value':
+        target_cards = [i for i in hintedPlayerHand if i.value == hint['value']]
+    else:
+        target_cards = [i for i in hintedPlayerHand if i.color == hint['value']]
+    max_add_reward = 0
+    for c in target_cards:
+        if len(state.tableCards[c.color]) == 0:
+            last = game.Card(0,0,c.color)
+        else:
+            last = state.tableCards[c.color][-1]
+        if c.value-1 == last.value:
+            max_add_reward = 3
+            break
+        if c.value > last.value:
+            max_add_reward = 1
+    for c in target_cards:
+        if len(state.tableCards[c.color]) == 0:
+            last = game.Card(0,0,c.color)
+        else:
+            last = state.tableCards[c.color][-1]
+        dupCheck = [i for i in hintedPlayerHand if i.value==c.value and i.color==c.color]
+        if c.value <= last.value or len(dupCheck)>=2:
+            reward += 2
+            break
+    if hint['value'] == 5:
+        reward += 5
+    
+    return reward
+        
+
+        
+        
+    reward += max_add_reward
+

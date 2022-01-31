@@ -36,7 +36,6 @@ def readQTable(Q, index, canHint=True, canFold=True): # index = row from checks,
 def updateQTable(index, nextIndex, action, reward, gamma=0.5, alpha=0.5, path='Q-table.npy'):
     Q = loadQTableFromFile(path)
     Qnext = max(Q[nextIndex]) # value of best next action
-    print((1-alpha)*Q[index][action] + alpha*(reward + gamma*Qnext))
     Q[index][action] = (1-alpha)*Q[index][action] + alpha*(reward + gamma*Qnext) # update Q
     saveQTableAsFile(Q, path)
 
@@ -44,4 +43,4 @@ def printQTable(path='Q-table.npy'):
     Q = loadQTableFromFile(path)
     print(Q)
 
-
+#printQTable()

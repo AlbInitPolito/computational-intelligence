@@ -163,6 +163,8 @@ def chooseCardToHint(state,playerHand):
         scores.update({i.name: {'numbers': numbs, 'colors': cols}})
     
     for p in state.players:
+        if p==state.currentPlayer:
+            continue
         for c in p.hand:
             if max([i.value for i in state.tableCards[c.color]],default=0) == (c.value-1):
                     scores[p.name]['numbers'][c.value] += 5
@@ -213,7 +215,7 @@ def chooseCardToHint(state,playerHand):
         hintable = np.where(np.array(val_list)==max(val_list))[0].tolist()
         ind = hintable[random.randint(0,len(hintable)-1)]
         if val_list[ind] > max_n['points']: # if better then last found
-            max_n['player'] = p.name
+            max_n['player'] = s
             max_n['points'] = val_list[ind] #associated points
             max_n['value'] = key_list[ind] # extracted number
 
@@ -222,7 +224,7 @@ def chooseCardToHint(state,playerHand):
         hintable = np.where(np.array(val_list)==max(val_list))[0].tolist()
         ind = hintable[random.randint(0,len(hintable)-1)]
         if val_list[ind] > max_c['points']: # if better then last found
-            max_c['player'] = p.name
+            max_c['player'] = s
             max_c['points'] = val_list[ind] #associated points
             max_c['color'] = key_list[ind] # extracted color
 
@@ -370,6 +372,7 @@ def computeHintReward(state,hint,playerHand):
             break
         if c.value > last.value:
             max_add_reward = 1
+    reward += max_add_reward
     for c in target_cards:
         if len(state.tableCards[c.color]) == 0:
             last = game.Card(0,0,c.color)
@@ -383,9 +386,4 @@ def computeHintReward(state,hint,playerHand):
         reward += 5
     
     return reward
-        
-
-        
-        
-    reward += max_add_reward
 

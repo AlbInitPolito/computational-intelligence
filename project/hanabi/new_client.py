@@ -42,7 +42,7 @@ def manageInput():
     global status
     global training
 
-    time.sleep(2.0)
+    #time.sleep(3.0)
 
     run = True
     first_round = True
@@ -56,8 +56,7 @@ def manageInput():
     # serve a tornare nell'if di show se non vengono ricevute le info di show dopo averle richieste
     requested_show = False
 
-    #s.setblocking(0) #todo????
-    ready = select.select([s], [], [], 3.0)
+    #ready = select.select([s], [], [], 3.0)
 
     # show inutile: ci serve solo per attivare la prima volta s.recv
     s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
@@ -68,10 +67,19 @@ def manageInput():
         reward = 0
 
         # aspettiamo che qualcuno faccia una mossa
-        if ready[0]:
+        #if ready[0]:
+        #    data = s.recv(DATASIZE)
+        #else:
+        #    break
+
+        try:
+            if training != 'pre':
+                s.settimeout(5.0)
             data = s.recv(DATASIZE)
-        else:
-            break
+        except:
+            if training != 'pre':
+                print("timeout")
+                break
 
         # intercettiamo gli hint per non perderli
         data = GameData.GameData.deserialize(data)
@@ -124,7 +132,7 @@ def manageInput():
                 continue
             # se in training, evitiamo tanti output
             else:
-                if training != 'self' and training != 'pre':
+                if training != 'self':
                     print("show")
                     print("Current player: " + data.currentPlayer)
                     print("Player hands: ")
@@ -149,10 +157,11 @@ def manageInput():
                 #choose a move
                 if training == 'pre': # if pre-training, input the move
                     move = input() # must be play, hint or discard
-                    while move not in ['play', 'hint', 'discard'] or (move=='hint' and data.usedNoteTokens==8):
+                    while move not in ['play', 'hint', 'discard'] or (move=='hint' and data.usedNoteTokens==8) \
+                                                    or (move=='discard' and data.usedNoteTokens==0):
                         print("you must specify only play, hint or discard!")
                         move = input()
-                    continue
+                    move = ['play', 'hint', 'discard'].index(move)
                 else: #if training or simply playin, choose move from q-table
                     canHint = True
                     canFold = True
@@ -279,7 +288,8 @@ def manageInput():
                         
                 # index, next_index, reward, move
 
-                qp.updateQTable(index,next_index,move,reward)
+                if training  in ['pre', 'self']:
+                    qp.updateQTable(index,next_index,move,reward)
 
                 # dopo il primo round, possiamo iniziare ad aggiornare la Q-table
                 index = next_index

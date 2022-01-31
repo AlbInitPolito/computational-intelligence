@@ -18,6 +18,7 @@ if card is unkown, id=0, value=0, color=None
 
 from calendar import c
 from configparser import MAX_INTERPOLATION_DEPTH
+from re import I
 import numpy as np
 import random
 import game
@@ -320,8 +321,8 @@ def computeDiscardReward(state,card,known_card,playerHand):
     complete = [i for i in playerHand if i.color and i.value]
     add_reward = 0
     for i in complete:
-        if len(state.tableCards[card.color]) == 0:
-            last = game.Card(0,0,card.color)
+        if len(state.tableCards[i.color]) == 0:
+            last = game.Card(0,0,i.color)
         else:
             last = state.tableCards[i.color][-1]
         if last.value == i.value-1:

@@ -36,18 +36,23 @@ statuses = ["Lobby", "Game", "GameHint"]
 
 status = statuses[0]
 
-hintState = ("", "") # ????????? todo        
+hintState = ("", "") # ????????? todo  
+
+reward = 0
 
 def manageInput():
     global status
     global training
+    global reward
 
-    #time.sleep(3.0)
+    time.sleep(3.0)
 
     run = True
     first_round = True
 
-    Qtable = qp.loadQTableFromFile() # list of size (256,3)
+    Qtable = False
+    while not Qtable:
+        Qtable = qp.loadQTableFromFile() # list of size (256,3)
 
     index = -1
 
@@ -64,8 +69,6 @@ def manageInput():
 
     while run:
 
-        reward = 0
-
         # aspettiamo che qualcuno faccia una mossa
         #if ready[0]:
         #    data = s.recv(DATASIZE)
@@ -74,12 +77,17 @@ def manageInput():
 
         try:
             if training != 'pre':
-                s.settimeout(5.0)
+                s.settimeout(10.0)
             data = s.recv(DATASIZE)
         except:
             if training != 'pre':
                 print("timeout")
-                break
+                return
+        
+        if not data:
+            s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
+            requested_show = True
+            continue
 
         # intercettiamo gli hint per non perderli
         data = GameData.GameData.deserialize(data)
@@ -121,6 +129,10 @@ def manageInput():
         s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
         requested_show = True
         data = s.recv(DATASIZE)
+        if not data:
+            s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
+            requested_show = True
+            continue
         data = GameData.GameData.deserialize(data)
 
         # se abbiamo ricevuto dati di show
@@ -179,6 +191,10 @@ def manageInput():
                     index = ck.chooseCardToPlay(data,memory) #choose card to play
                     s.send(GameData.ClientPlayerPlayCardRequest(playerName, index).serialize())
                     data = s.recv(DATASIZE)
+                    if not data:
+                        s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
+                        requested_show = True
+                        continue
 
                     #collect the reward
                     if type(data) is GameData.ServerPlayerMoveOk:
@@ -247,6 +263,10 @@ def manageInput():
                     # in ogni caso, rimaniamo nel while
                     while requested_show:
                         data = s.recv(DATASIZE)
+                        if not data:
+                            s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
+                            requested_show = True
+                            continue
                         # intercettiamo gli hint per non perderli
                         data = GameData.GameData.deserialize(data)
                         if type(data) is GameData.ServerHintData:
@@ -262,6 +282,8 @@ def manageInput():
                             continue
                         else: # check last discard pile card
                             requested_show = False
+                            if len(data.discardPile)==0:
+                                return
                             discarded_card = data.discardPile[-1]
 
                     #obtain the reward
@@ -290,6 +312,7 @@ def manageInput():
 
                 if training  in ['pre', 'self']:
                     qp.updateQTable(index,next_index,move,reward)
+                    reward = 0
 
                 # dopo il primo round, possiamo iniziare ad aggiornare la Q-table
                 index = next_index

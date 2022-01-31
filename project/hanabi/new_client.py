@@ -40,10 +40,13 @@ hintState = ("", "") # ????????? todo
 
 reward = 0
 
+index = -1
+
 def manageInput():
     global status
     global training
     global reward
+    global index
 
     time.sleep(3.0)
 
@@ -53,8 +56,6 @@ def manageInput():
     Qtable = False
     while not Qtable:
         Qtable = qp.loadQTableFromFile() # list of size (256,3)
-
-    index = -1
 
     memory = [ game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None) ] # known cards -> 5 card 
 
@@ -165,7 +166,7 @@ def manageInput():
                     print("[" + playerName + " - " + status + "]: ", end="")
 
                 next_index = ck.getQrow(data,memory) #update for previous play depends on its state and the new state
-                
+
                 #choose a move
                 if training == 'pre': # if pre-training, input the move
                     move = input() # must be play, hint or discard
@@ -188,8 +189,8 @@ def manageInput():
 
                 # execute the move play
                 if move == 0:
-                    index = ck.chooseCardToPlay(data,memory) #choose card to play
-                    s.send(GameData.ClientPlayerPlayCardRequest(playerName, index).serialize())
+                    card_index = ck.chooseCardToPlay(data,memory) #choose card to play
+                    s.send(GameData.ClientPlayerPlayCardRequest(playerName, card_index).serialize())
                     data = s.recv(DATASIZE)
                     if not data:
                         s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
@@ -209,9 +210,9 @@ def manageInput():
                             print("Current player: " + data.player)
 
                     #update memory
-                    played_card = memory.pop(index)
+                    played_card = memory.pop(card_index)
                     if training not in ['pre', 'self']:
-                        print("Playing card in position ", index)
+                        print("Playing card in position ", card_index)
                         if not played_card.color:
                             played_card.color = 'Unknown'
                         if played_card.value == 0:
@@ -249,12 +250,12 @@ def manageInput():
 
                 #execute the move discard
                 else:
-                    index = ck.chooseCardToDiscard(data,memory)
-                    s.send(GameData.ClientPlayerDiscardCardRequest(playerName, index).serialize())
+                    discard_index = ck.chooseCardToDiscard(data,memory)
+                    s.send(GameData.ClientPlayerDiscardCardRequest(playerName, discard_index).serialize())
 
                     #update memory
                     old_memory = memory.copy()
-                    known_discarded_card = memory.pop(index) #retrieve informations on discarded card
+                    known_discarded_card = memory.pop(discard_index) #retrieve informations on discarded card
 
                     s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
                     requested_show = True
@@ -291,7 +292,7 @@ def manageInput():
                     reward = ck.computeDiscardReward(data,discarded_card,known_discarded_card,old_memory)
 
                     if training not in ['pre', 'self']:
-                        print("Discarding card in position ", index)
+                        print("Discarding card in position ", discard_index)
                         if not known_discarded_card.color:
                             known_discarded_card.color = 'Unknown'
                         if known_discarded_card.value == 0:
@@ -315,7 +316,11 @@ def manageInput():
                     reward = 0
 
                 # dopo il primo round, possiamo iniziare ad aggiornare la Q-table
+                print("INDICIIIIIIIIIIIIIIIIIIIIIIIIIIII")
+                print(index)
                 index = next_index
+                print(next_index)
+                print()
 
         # se lo show è stato richiesto ma è stato perso, lo richiediamo
         elif requested_show:

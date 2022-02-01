@@ -32,7 +32,7 @@ def readQTable(Q, index, canHint=True, canFold=True): # index = row from checks,
         best_actions = np.where(np.array(tempQ) == max(tempQ))[0].tolist()
     elif not canFold:
         tempQ = Q[index].copy()
-        tempQ.pop(2) # todo correct out of index ?
+        tempQ.pop(2)
         best_actions = np.where(np.array(tempQ) == max(tempQ))[0].tolist()
     else:
         best_actions = np.where(np.array(Q[index]) == max(Q[index]))[0].tolist() # list of the indexes related to the best actions [0 play, 1 hint, 2 discard]
@@ -42,7 +42,7 @@ def readQTable(Q, index, canHint=True, canFold=True): # index = row from checks,
             return 2
     return best_actions[ind]
 
-def updateQTable(index, nextIndex, action, reward, gamma=1, alpha=0.8, path='Q-table.npy'):
+def updateQTable(index, nextIndex, action, reward, gamma=0, alpha=0.9, path='Q-table.npy'):
     Q = False
     while not Q:
         Q = loadQTableFromFile(path)

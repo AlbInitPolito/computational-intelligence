@@ -324,6 +324,8 @@ def chooseCardToDiscard(state, playerHand):
 
 #qp.QTableFrom0()
 #print(qp.loadQTableFromFile('Q-table-0.npy'))
+
+'''
 while True:
     index = checks.getQrow(act_state, hand)
     #print(index)
@@ -333,3 +335,13 @@ while True:
     nextIndex = checks.getQrow(act_state3, hand)
     qp.updateQTable(index, nextIndex, 1, reward, path='Q-table-0.npy')
     print(qp.loadQTableFromFile('Q-table-0.npy')[200])
+'''
+
+ex = [card(1,1,'red'),card(2,2,'red'),card(3,3,'red')]
+
+print(card(1,1,'red') in ex)
+
+c = card(1,1,'red')
+
+print([i for i in ex if i.id==c.id])
+print(c.id in [i.id for i in ex if i.id==c.id])

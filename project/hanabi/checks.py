@@ -154,31 +154,57 @@ def chooseCardToPlay(state,playerHand): #return card index to play
     ind = random.randint(0,len(playable)-1)
     return playable[ind]
 
-def chooseCardToHint(state,playerHand):
+def chooseCardToHint(state,playerHand,hint_memory):
     scores = {}
-    for i in state.players:
-        if i.name==state.currentPlayer:
+    for p in state.players:
+        if p.name==state.currentPlayer:
             continue
-        numbs = {i:0 for i in list(set([c.value for c in i.hand])) }
-        cols = {i:0 for i in list(set([c.color for c in i.hand])) } # takes any owned color and transforms in {color: 0}
-        scores.update({i.name: {'numbers': numbs, 'colors': cols}})
+        numbs = {i:0 for i in list(set([c.value for c in p.hand])) }
+        cols = {i:0 for i in list(set([c.color for c in p.hand])) } # takes any owned color and transforms in {color: 0}
+        
+        color_hints = [h['color'] for h in hint_memory[p.name] if h=='color']
+        value_hints = [h['value'] for h in hint_memory[p.name] if h=='value']
+
+        temp_numbs = {}
+        for i in numbs:
+            if i not in value_hints:
+                temp_numbs[i] = 0
+        
+        temp_cols = {}
+        for i in cols:
+            if i not in color_hints:
+                temp_cols[i] = 0
+
+        #numbs = list(filter(lambda x : x not in value_hints, numbs))
+        #cols = list(filter(lambda x : x not in color_hints, cols))
+
+        numbs = temp_numbs
+        cols = temp_cols
+
+        scores.update({p.name: {'numbers': numbs, 'colors': cols}})
     
     for p in state.players:
         if p==state.currentPlayer:
             continue
         for c in p.hand:
             if max([i.value for i in state.tableCards[c.color]],default=0) == (c.value-1):
+                if c.value not in value_hints:
                     scores[p.name]['numbers'][c.value] += 5
+                if c.color not in color_hints:
                     scores[p.name]['colors'][c.color] += 5
             for d in playerHand:
                 if d.value==0 or d.color==None:
                     continue
                 if c.color==d.color and (c.value==d.value-1 or c.value==d.value+1):
-                    scores[p.name]['numbers'][c.value] += 1
-                    scores[p.name]['colors'][c.color] += 1
+                    if c.value not in value_hints:
+                        scores[p.name]['numbers'][c.value] += 1
+                    if c.color not in color_hints:
+                        scores[p.name]['colors'][c.color] += 1
                 if c.color==d.color and c.value==d.value:
-                    scores[p.name]['numbers'][c.value] += 5
-                    scores[p.name]['colors'][c.color] += 5
+                    if c.value not in value_hints:
+                        scores[p.name]['numbers'][c.value] += 5
+                    if c.color not in color_hints:
+                        scores[p.name]['colors'][c.color] += 5
             for q in state.players:
                 if q.name==p.name:
                     continue
@@ -186,29 +212,42 @@ def chooseCardToHint(state,playerHand):
                     if d.value==0 or d.color==None:
                         continue
                     if c.color==d.color and (c.value==d.value-1 or c.value==d.value+1):
-                        scores[p.name]['numbers'][c.value] += 1
-                        scores[p.name]['colors'][c.color] += 1
+                        if c.value not in value_hints:
+                            scores[p.name]['numbers'][c.value] += 1
+                        if c.color not in color_hints:
+                            scores[p.name]['colors'][c.color] += 1
                     if c.color==d.color and c.value==d.value:
-                        scores[p.name]['numbers'][c.value] += 5
-                        scores[p.name]['colors'][c.color] += 5
-            dist = c.value - max([i.value for i in state.tableCards[c.color]],default=0)
-            if dist>0:
-                scores[p.name]['numbers'][c.value] += dist
-                scores[p.name]['colors'][c.color] += dist
+                        if c.value not in value_hints:
+                            scores[p.name]['numbers'][c.value] += 5
+                        if c.color not in color_hints:
+                            scores[p.name]['colors'][c.color] += 5
+            if c.value not in value_hints:
+                dist = c.value - max([i.value for i in state.tableCards[c.color]],default=0)
+                if dist>0:
+                    if c.value not in value_hints:
+                        scores[p.name]['numbers'][c.value] += dist
+                    if c.color not in color_hints:
+                        #print(scores[p.name])
+                        scores[p.name]['colors'][c.color] += dist
             if c.value==1:
-                scores[p.name]['numbers'][c.value] += 1
+                if c.value not in value_hints:
+                    scores[p.name]['numbers'][c.value] += 1
             if len(state.tableCards[c.color])>0:
-                scores[p.name]['colors'][c.color] += 1
+                if c.color not in color_hints:
+                    scores[p.name]['colors'][c.color] += 1
             dupCheck = [i for i in p.hand if i.value==c.value and i.color==c.color]
             if len(dupCheck)>=2 or max([i.value for i in state.tableCards[c.color]],default=0) >= c.value or \
                                 len([i for i in state.discardPile if i.color==c.color and i.value==c.value])>0:
-                scores[p.name]['numbers'][c.value] += 10
-                scores[p.name]['colors'][c.color] += 10
+                if c.value not in value_hints:
+                    scores[p.name]['numbers'][c.value] += 10
+                if c.color not in color_hints:
+                    scores[p.name]['colors'][c.color] += 10
             if c.value == 5:
-                scores[p.name]['numbers'][c.value] += 5
+                if c.value not in value_hints:
+                    scores[p.name]['numbers'][c.value] += 5
 
-    max_n = {'player': None, 'value': 0, 'points': -1}
-    max_c = {'player': None, 'color': None, 'points': -1}
+    max_n = {'player': None, 'value': 0, 'points': 0}
+    max_c = {'player': None, 'color': None, 'points': 0}
 
     for s in scores:
         key_list=list(scores[s]['numbers'].keys()) #all numbers
@@ -229,12 +268,14 @@ def chooseCardToHint(state,playerHand):
             max_c['points'] = val_list[ind] #associated points
             max_c['color'] = key_list[ind] # extracted color
 
+    if max_n['player'] == None and max_c['player'] == None:
+        return None
+
     if max_n['points']>max_c['points']:
         return max_n
     elif max_n['points']<max_c['points']:
         return max_c
     else:
-        # todo check list index out of range ?
         h1 = list(filter(lambda p: p.name == max_n['player'], state.players))[0].hand
         h2 = list(filter(lambda p: p.name == max_c['player'], state.players))[0].hand
         if len([i for i in h1 if i.value == max_n['value']]) > \

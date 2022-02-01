@@ -46,7 +46,8 @@ statuses = ["Lobby", "Game", "GameHint"]
 
 status = statuses[0]
 
-hintState = ("", "") # ????????? todo  
+hint_memory = {} #memory of hints to other players
+hands_memory = {} #memory of other players
 
 move = -1
 reward = 0
@@ -58,6 +59,9 @@ def manageInput():
     global reward
     global index
     global move
+    global hint_memory
+
+    hint_memory = {}
 
     #time.sleep(3.0)
 
@@ -124,6 +128,12 @@ def manageInput():
                     print("Owned cards:")
                     for i in memory: #print our memory
                         print(i.toClientString())
+            else:
+                for i in data.positions:
+                    if data.destination not in hint_memory:
+                        hint_memory[data.destination] = []
+                    if {data.type: data.value} not in hint_memory[data.destination]:
+                        hint_memory[data.destination].append({data.type: data.value})
 
             if training != 'self' or verbose:
                 print()
@@ -155,6 +165,28 @@ def manageInput():
         # se abbiamo ricevuto dati di show
         # aggiorniamo gli stati DA FARE
         if type(data) is GameData.ServerGameStateData:
+
+            if not hint_memory:
+                for p in data.players:
+                    hint_memory[p.name] = []
+
+            if hands_memory:
+                #update other players' hint memory
+                for p in data.players:
+                    if p.name != playerName:
+                        for c in p.hand:
+                            if c.id not in [i.id for i in hands_memory[p.name] if i.id==c.id]:
+                                # hint_memory[p.name] -> lista di hint
+                                color_hints = [i['color'] for i in hint_memory[p.name] if i=='color']
+                                value_hints = [i['value'] for i in hint_memory[p.name] if i=='value']
+                                hint_memory[p.name] = list(filter(lambda x : x!=c.color, color_hints))
+                                hint_memory[p.name] = hint_memory[p.name] + list(filter(lambda x : x!=c.value, value_hints))
+
+            # update other players' hand knowledge
+            for p in data.players:
+                if p.name != playerName:
+                    hands_memory[p.name] = p.hand.copy()
+
             requested_show = False
             # se non tocca a noi, torniamo su e continuiamo ad aspettare
             if data.currentPlayer != playerName:
@@ -180,8 +212,8 @@ def manageInput():
                     print("Storm tokens used: " + str(data.usedStormTokens) + "/3")
                     print()
                     print("[" + playerName + " - " + status + "]: ", end="")
-                else:
-                    print("TOKENS: ", 8-data.usedNoteTokens)
+                #else:
+                #    print("TOKENS: ", 8-data.usedNoteTokens)
 
                 next_index = ck.getQrow(data,memory) #update for previous play depends on its state and the new state
 
@@ -196,14 +228,17 @@ def manageInput():
                 else: #if training or simply playin, choose move from q-table
                     canHint = True
                     canFold = True
-                    if data.usedNoteTokens==8:
+                    if data.usedNoteTokens==8 or ck.chooseCardToHint(data,memory,hint_memory) == None:
                         canHint = False
                     elif data.usedNoteTokens==0:
                         canFold = False
-                    move = qp.readQTable(Qtable,next_index,canHint,canFold)
-                    if move not in [0,1,2]:
-                        print("move error: ", move)
-                        exit
+                    if not canHint and not canFold:
+                        move = 0
+                    else:
+                        move = qp.readQTable(Qtable,next_index,canHint,canFold)
+                        if move not in [0,1,2]:
+                            print("move error: ", move)
+                            exit
 
                 # execute the move play
                 if move == 0:
@@ -257,7 +292,7 @@ def manageInput():
 
                 #execute the move hint
                 elif move == 1:
-                    hint = ck.chooseCardToHint(data,memory)
+                    hint = ck.chooseCardToHint(data,memory,hint_memory)
                     if 'value' in hint:
                         value = hint['value']
                         t = 'value'
@@ -265,6 +300,11 @@ def manageInput():
                         value = hint['color']
                         t = 'color'
                     hint = {'player': hint['player'], 'value': value, 'type': t} 
+
+                    if hint['player'] not in hint_memory:
+                        hint_memory[data.destination] = []
+                    if {t: value} not in hint_memory[hint['player']]:
+                        hint_memory[hint['player']].append({t: value})
 
                     #collect the reward
                     reward = ck.computeHintReward(data,hint,memory)
@@ -308,6 +348,12 @@ def manageInput():
                                         memory[i].value = data.value
                                     else:
                                         memory[i].color = data.value
+                            else:
+                                for i in data.positions:
+                                    if data.destination not in hint_memory:
+                                        hint_memory[data.destination] = []
+                                    if {data.type: data.value} not in hint_memory[data.destination]:
+                                        hint_memory[data.destination].append({data.type: data.value})
 
                         if type(data) is not GameData.ServerGameStateData:
                             s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
@@ -317,6 +363,27 @@ def manageInput():
                             if len(data.discardPile)==0:
                                 return
                             discarded_card = data.discardPile[-1]
+
+                            if not hint_memory:
+                                for p in data.players:
+                                    hint_memory[p.name] = []
+
+                            if hands_memory:
+                                #update other players' hint memory
+                                for p in data.players:
+                                    if p.name != playerName:
+                                        for c in p.hand:
+                                            if c.id not in [i.id for i in hands_memory[p.name] if i.id==c.id]:
+                                                # hint_memory[p.name] -> lista di hint
+                                                color_hints = [i for i in hint_memory[p.name] if i=='color']
+                                                value_hints = [i for i in hint_memory[p.name] if i=='value']
+                                                hint_memory[p.name] = list(filter(lambda x : x['color']!=c.color, color_hints))
+                                                hint_memory[p.name] = hint_memory[p.name] + list(filter(lambda x : x['value']!=c.value, value_hints))
+
+                            # update other players' hand knowledge
+                            for p in data.players:
+                                if p.name != playerName:
+                                    hands_memory[p.name] = p.hand.copy()
 
                     #obtain the reward
                     #pass data, discarded_card, known_discarded_card, old_memory

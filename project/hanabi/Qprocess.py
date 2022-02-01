@@ -42,12 +42,15 @@ def readQTable(Q, index, canHint=True, canFold=True): # index = row from checks,
             return 2
     return best_actions[ind]
 
-def updateQTable(index, nextIndex, action, reward, gamma=0, alpha=0.9, path='Q-table.npy'):
+def updateQTable(index, nextIndex, action, reward, gamma=1, alpha=0.8, path='Q-table.npy'):
     Q = False
     while not Q:
         Q = loadQTableFromFile(path)
     Qnext = max(Q[nextIndex]) # value of best next action
+    actual = Q[index].copy()
     Q[index][action] = round((1-alpha)*Q[index][action] + alpha*(reward + gamma*Qnext),2) # update Q
+    #if len([i for i,j in zip(actual,Q[index]) if i==j])==3:
+    #    print("DIDN'T UPDATE!!!!!!!!!!!!!!!!!!")
     outcome = False
     while not outcome:
         outcome = saveQTableAsFile(Q, path)

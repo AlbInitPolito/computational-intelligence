@@ -59,7 +59,7 @@ def manageInput():
     global index
     global move
 
-    time.sleep(3.0)
+    #time.sleep(3.0)
 
     run = True
     first_round = True
@@ -131,6 +131,7 @@ def manageInput():
                 print()
         
         elif type(data) is GameData.ServerGameOver:
+            qp.updateQTable(next_index,next_index,0,-50,0,0.9)
             print()
             print(data.message)
             print(data.score)
@@ -179,6 +180,8 @@ def manageInput():
                     print("Storm tokens used: " + str(data.usedStormTokens) + "/3")
                     print()
                     print("[" + playerName + " - " + status + "]: ", end="")
+                else:
+                    print("TOKENS: ", 8-data.usedNoteTokens)
 
                 next_index = ck.getQrow(data,memory) #update for previous play depends on its state and the new state
 
@@ -225,6 +228,7 @@ def manageInput():
                             print("OH NO! The Gods are unhappy with you!")
                             print("Current player: " + data.player)
                     elif type(data) is GameData.ServerGameOver:
+                        qp.updateQTable(next_index,next_index,0,-50,0,0.9)
                         print()
                         print(data.message)
                         print(data.score)
@@ -273,8 +277,6 @@ def manageInput():
                         print("Current player: ", data.currentPlayer)
                         print("[" + playerName + " - " + status + "]: ", end="")
                         print()
-
-                    continue
 
                 #execute the move discard
                 else:

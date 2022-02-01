@@ -185,7 +185,7 @@ def chooseCardToHint(state,playerHand):
                 for d in q.hand:
                     if d.value==0 or d.color==None:
                         continue
-                    if c.color==d.color and (c.value==d.value-1 or c.value==d.vale+1):
+                    if c.color==d.color and (c.value==d.value-1 or c.value==d.value+1):
                         scores[p.name]['numbers'][c.value] += 1
                         scores[p.name]['colors'][c.color] += 1
                     if c.color==d.color and c.value==d.value:

@@ -37,14 +37,17 @@ def readQTable(Q, index, canHint=True, canFold=True): # index = row from checks,
     else:
         best_actions = np.where(np.array(Q[index]) == max(Q[index]))[0].tolist() # list of the indexes related to the best actions [0 play, 1 hint, 2 discard]
     ind = random.randint(0, len(best_actions)-1)
+    if not canHint:
+        if best_actions[ind] == 1:
+            return 2
     return best_actions[ind]
 
-def updateQTable(index, nextIndex, action, reward, gamma=0.2, alpha=0.9, path='Q-table.npy'):
+def updateQTable(index, nextIndex, action, reward, gamma=0, alpha=0.9, path='Q-table.npy'):
     Q = False
     while not Q:
         Q = loadQTableFromFile(path)
     Qnext = max(Q[nextIndex]) # value of best next action
-    Q[index][action] = (1-alpha)*Q[index][action] + alpha*(reward + gamma*Qnext) # update Q
+    Q[index][action] = round((1-alpha)*Q[index][action] + alpha*(reward + gamma*Qnext),2) # update Q
     outcome = False
     while not outcome:
         outcome = saveQTableAsFile(Q, path)
@@ -55,5 +58,5 @@ def printQTable(path='Q-table.npy'):
 
 
 if __name__ == "__main__":
-    QTableFrom0()
-    #printQTable()
+    #QTableFrom0()
+    printQTable()

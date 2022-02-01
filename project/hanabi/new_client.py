@@ -52,6 +52,7 @@ hands_memory = {} #memory of other players
 move = -1
 reward = 0
 index = -1
+next_index = -1
 
 def manageInput():
     global status
@@ -60,6 +61,7 @@ def manageInput():
     global index
     global move
     global hint_memory
+    global next_index
 
     hint_memory = {}
 
@@ -166,8 +168,10 @@ def manageInput():
         # aggiorniamo gli stati DA FARE
         if type(data) is GameData.ServerGameStateData:
 
-            if not hint_memory:
-                for p in data.players:
+            #print("TOKENS: ",8-data.usedNoteTokens)
+
+            for p in data.players:
+                if p.name not in hint_memory:
                     hint_memory[p.name] = []
 
             if hands_memory:
@@ -363,9 +367,9 @@ def manageInput():
                             if len(data.discardPile)==0:
                                 return
                             discarded_card = data.discardPile[-1]
-
-                            if not hint_memory:
-                                for p in data.players:
+                            
+                            for p in data.players:
+                                if p.name not in hint_memory:
                                     hint_memory[p.name] = []
 
                             if hands_memory:
@@ -408,6 +412,10 @@ def manageInput():
                     continue
                         
                 # index, next_index, reward, move
+                #print()
+                #print("MOVE: ", move)
+                #print("REWARD: ", reward)
+                #print()
                 if training  in ['pre', 'self']:
                     qp.updateQTable(index,next_index,move,reward)
                     reward = 0

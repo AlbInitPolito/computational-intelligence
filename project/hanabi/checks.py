@@ -367,7 +367,8 @@ def computeDiscardReward(state,card,known_card,playerHand):
         else:
             last = state.tableCards[i.color][-1]
         if last.value == i.value-1:
-            add_reward -= 1
+            add_reward -= 10
+            break
     if not add_reward:
         reward += 3
     
@@ -382,10 +383,10 @@ def computeHintReward(state,hint,playerHand):
         else:
             last = state.tableCards[i.color][-1]
         if last.value == i.value-1:
-            reward -= 2
+            reward -= 10
             break
     if not reward:
-        reward += 2
+        reward += 1
     for c in playerHand:
         if c.value and c.color:
             dupCheck = [i for i in playerHand if i.value==c.value and i.color==c.color]
@@ -396,7 +397,7 @@ def computeHintReward(state,hint,playerHand):
             if len(dupCheck)>=2 or last.value >= c.value:
                 reward -= 2
                 break
-    reward += 2-state.usedNoteTokens # (7 6 5 4 3 2 1 0) -> (-5 -4 -3 -2 -1 0 +1 +2)
+    reward -= state.usedNoteTokens
     hintedPlayerHand = list(filter(lambda p: p.name == hint['player'], state.players))[0].hand
     # hint = {'player': hint['player'], 'value': value, 'type': t}
     if hint['type'] == 'value':
@@ -422,7 +423,7 @@ def computeHintReward(state,hint,playerHand):
             last = state.tableCards[c.color][-1]
         dupCheck = [i for i in hintedPlayerHand if i.value==c.value and i.color==c.color]
         if c.value <= last.value or len(dupCheck)>=2:
-            reward += 2
+            reward += 1
             break
     if hint['value'] == 5:
         reward += 5

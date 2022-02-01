@@ -286,6 +286,7 @@ def manageInput():
                     #update memory
                     old_memory = memory.copy()
                     known_discarded_card = memory.pop(discard_index) #retrieve informations on discarded card
+                    memory.append(game.Card(0,0,None))
 
                     s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
                     requested_show = True
@@ -303,18 +304,10 @@ def manageInput():
                         if type(data) is GameData.ServerHintData:
                             if data.destination == playerName: #if hint is for us, update our memory
                                 for i in data.positions:
-                                    if i == discard_index:
-                                        continue
-                                    elif i>discard_index:
-                                        if data.type =='value':
-                                            memory[i-1].value = data.value
-                                        else:
-                                            memory[i-1].color = data.value
+                                    if data.type =='value':
+                                        memory[i].value = data.value
                                     else:
-                                        if data.type =='value':
-                                            memory[i].value = data.value
-                                        else:
-                                            memory[i].color = data.value
+                                        memory[i].color = data.value
 
                         if type(data) is not GameData.ServerGameStateData:
                             s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
@@ -337,7 +330,6 @@ def manageInput():
                             known_discarded_card.value = 'Unknown'
                         print(known_discarded_card.toClientString())
                         print()
-                    memory.append(game.Card(0,0,None))
 
                     if training != 'self' or verbose:
                         print("Current player: ", data.currentPlayer)

@@ -329,8 +329,6 @@ def manageInput():
                         t = 'color'
                     hint = {'player': hint['player'], 'value': value, 'type': t} 
 
-                    print("Hint: "+str(t)+" "+str(value)+" to player: "+str(hint['player']))
-
                     if training != 'self' or verbose:
                         print("Hinting to: "+str(hint['player'])+" "+str(t)+": "+str(value))
 

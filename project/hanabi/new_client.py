@@ -180,12 +180,16 @@ def manageInput():
                     if p.name != playerName:
                         for c in p.hand:
                             if c.id not in [i.id for i in hands_memory[p.name] if i.id==c.id]:
+                                #print(c.toClientString())
                                 # hint_memory[p.name] -> lista di hint
+                                #print("HINT MEMORY BEFORE: ", hint_memory)
                                 color_hints = [i for i in hint_memory[p.name] if list(i.keys())[0]=='color']
                                 value_hints = [i for i in hint_memory[p.name] if list(i.keys())[0]=='value']
-                                hint_memory[p.name] = list(filter(lambda x : x!=c.color, color_hints))
-                                hint_memory[p.name] = hint_memory[p.name] + list(filter(lambda x : x!=c.value, value_hints))
-                                #print("HINT MEMORY: ", hint_memory)
+                                #print("COLOR HINTS: ", color_hints)
+                                #print("VALUE HINTS: ", value_hints)
+                                hint_memory[p.name] = list(filter(lambda x : x['color']!=c.color, color_hints))
+                                hint_memory[p.name] = hint_memory[p.name] + list(filter(lambda x : x['value']!=c.value, value_hints))
+                                #print("HINT MEMORY AFTER: ", hint_memory)
 
             # update other players' hand knowledge
             for p in data.players:

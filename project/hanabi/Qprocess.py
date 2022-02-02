@@ -61,5 +61,5 @@ def printQTable(path='Q-table.npy'):
 
 
 if __name__ == "__main__":
-    #QTableFrom0()
+    QTableFrom0()
     printQTable()

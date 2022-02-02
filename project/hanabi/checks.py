@@ -168,6 +168,9 @@ def chooseCardToHint(state,playerHand,hint_memory):
         color_hints[p.name] = [h['color'] for h in hint_memory[p.name] if list(h.keys())[0]=='color']
         value_hints[p.name] = [h['value'] for h in hint_memory[p.name] if list(h.keys())[0]=='value']
 
+        #print("COLOR HINTS: ", color_hints)
+        #print("VALUE HINTS: ", value_hints)
+
         temp_numbs = {}
         for i in numbs:
             if i not in value_hints[p.name]:

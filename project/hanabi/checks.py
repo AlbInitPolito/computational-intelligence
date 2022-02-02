@@ -157,23 +157,25 @@ def chooseCardToPlay(state,playerHand): #return card index to play
 
 def chooseCardToHint(state,playerHand,hint_memory):
     scores = {}
+    color_hints = {}
+    value_hints = {}
     for p in state.players:
         if p.name==state.currentPlayer:
             continue
         numbs = {i:0 for i in list(set([c.value for c in p.hand])) }
         cols = {i:0 for i in list(set([c.color for c in p.hand])) } # takes any owned color and transforms in {color: 0}
         
-        color_hints = [h['color'] for h in hint_memory[p.name] if list(h.keys())[0]=='color']
-        value_hints = [h['value'] for h in hint_memory[p.name] if list(h.keys())[0]=='value']
+        color_hints[p.name] = [h['color'] for h in hint_memory[p.name] if list(h.keys())[0]=='color']
+        value_hints[p.name] = [h['value'] for h in hint_memory[p.name] if list(h.keys())[0]=='value']
 
         temp_numbs = {}
         for i in numbs:
-            if i not in value_hints:
+            if i not in value_hints[p.name]:
                 temp_numbs[i] = 0
         
         temp_cols = {}
         for i in cols:
-            if i not in color_hints:
+            if i not in color_hints[p.name]:
                 temp_cols[i] = 0
 
         #numbs = list(filter(lambda x : x not in value_hints, numbs))
@@ -191,22 +193,22 @@ def chooseCardToHint(state,playerHand,hint_memory):
             continue
         for c in p.hand:
             if max([i.value for i in state.tableCards[c.color]],default=0) == (c.value-1):
-                if c.value not in value_hints:
+                if c.value not in value_hints[p.name]:
                     scores[p.name]['numbers'][c.value] += 5
-                if c.color not in color_hints:
+                if c.color not in color_hints[p.name]:
                     scores[p.name]['colors'][c.color] += 5
             for d in playerHand:
                 if d.value==0 or d.color==None:
                     continue
                 if c.color==d.color and (c.value==d.value-1 or c.value==d.value+1):
-                    if c.value not in value_hints:
+                    if c.value not in value_hints[p.name]:
                         scores[p.name]['numbers'][c.value] += 1
-                    if c.color not in color_hints:
+                    if c.color not in color_hints[p.name]:
                         scores[p.name]['colors'][c.color] += 1
                 if c.color==d.color and c.value==d.value:
-                    if c.value not in value_hints:
+                    if c.value not in value_hints[p.name]:
                         scores[p.name]['numbers'][c.value] += 5
-                    if c.color not in color_hints:
+                    if c.color not in color_hints[p.name]:
                         scores[p.name]['colors'][c.color] += 5
             for q in state.players:
                 if q.name==p.name:
@@ -215,38 +217,37 @@ def chooseCardToHint(state,playerHand,hint_memory):
                     if d.value==0 or d.color==None:
                         continue
                     if c.color==d.color and (c.value==d.value-1 or c.value==d.value+1):
-                        if c.value not in value_hints:
+                        if c.value not in value_hints[p.name]:
                             scores[p.name]['numbers'][c.value] += 1
-                        if c.color not in color_hints:
+                        if c.color not in color_hints[p.name]:
                             scores[p.name]['colors'][c.color] += 1
                     if c.color==d.color and c.value==d.value:
-                        if c.value not in value_hints:
+                        if c.value not in value_hints[p.name]:
                             scores[p.name]['numbers'][c.value] += 5
-                        if c.color not in color_hints:
+                        if c.color not in color_hints[p.name]:
                             scores[p.name]['colors'][c.color] += 5
-            if c.value not in value_hints:
+            if c.value not in value_hints[p.name]:
                 dist = c.value - max([i.value for i in state.tableCards[c.color]],default=0)
                 if dist>0:
-                    if c.value not in value_hints:
+                    if c.value not in value_hints[p.name]:
                         scores[p.name]['numbers'][c.value] += dist
-                    if c.color not in color_hints:
-                        #print(scores[p.name])
+                    if c.color not in color_hints[p.name]:
                         scores[p.name]['colors'][c.color] += dist
             if c.value==1:
-                if c.value not in value_hints:
+                if c.value not in value_hints[p.name]:
                     scores[p.name]['numbers'][c.value] += 1
             if len(state.tableCards[c.color])>0:
-                if c.color not in color_hints:
+                if c.color not in color_hints[p.name]:
                     scores[p.name]['colors'][c.color] += 1
             dupCheck = [i for i in p.hand if i.value==c.value and i.color==c.color]
             if len(dupCheck)>=2 or max([i.value for i in state.tableCards[c.color]],default=0) >= c.value or \
                                 len([i for i in state.discardPile if i.color==c.color and i.value==c.value])>0:
-                if c.value not in value_hints:
+                if c.value not in value_hints[p.name]:
                     scores[p.name]['numbers'][c.value] += 10
-                if c.color not in color_hints:
+                if c.color not in color_hints[p.name]:
                     scores[p.name]['colors'][c.color] += 10
             if c.value == 5:
-                if c.value not in value_hints:
+                if c.value not in value_hints[p.name]:
                     scores[p.name]['numbers'][c.value] += 5
 
     max_n = {'player': None, 'value': 0, 'points': 0}

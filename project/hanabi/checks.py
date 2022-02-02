@@ -18,12 +18,13 @@ if card is unkown, id=0, value=0, color=None
 
 from calendar import c
 from configparser import MAX_INTERPOLATION_DEPTH
+from email.policy import default
 from re import I
 import numpy as np
 import random
 import game
 
-from sklearn.linear_model import ElasticNet
+#from sklearn.linear_model import ElasticNet
 
 def checkPlayedOne(state,playerHand): # check if there is a known 1 card that has never been played
     for c in playerHand:
@@ -162,8 +163,8 @@ def chooseCardToHint(state,playerHand,hint_memory):
         numbs = {i:0 for i in list(set([c.value for c in p.hand])) }
         cols = {i:0 for i in list(set([c.color for c in p.hand])) } # takes any owned color and transforms in {color: 0}
         
-        color_hints = [h['color'] for h in hint_memory[p.name] if h=='color']
-        value_hints = [h['value'] for h in hint_memory[p.name] if h=='value']
+        color_hints = [h['color'] for h in hint_memory[p.name] if list(h.keys())[0]=='color']
+        value_hints = [h['value'] for h in hint_memory[p.name] if list(h.keys())[0]=='value']
 
         temp_numbs = {}
         for i in numbs:
@@ -175,13 +176,15 @@ def chooseCardToHint(state,playerHand,hint_memory):
             if i not in color_hints:
                 temp_cols[i] = 0
 
-        #numbs = list(filter(lambda x : x not in value_hints, numbs))
-        #cols = list(filter(lambda x : x not in color_hints, cols))
+        numbs = list(filter(lambda x : x not in value_hints, numbs))
+        cols = list(filter(lambda x : x not in color_hints, cols))
 
         numbs = temp_numbs
         cols = temp_cols
 
         scores.update({p.name: {'numbers': numbs, 'colors': cols}})
+
+        #print(scores)
     
     for p in state.players:
         if p==state.currentPlayer:
@@ -252,7 +255,7 @@ def chooseCardToHint(state,playerHand,hint_memory):
     for s in scores:
         key_list=list(scores[s]['numbers'].keys()) #all numbers
         val_list=list(scores[s]['numbers'].values()) #all points
-        hintable = np.where(np.array(val_list)==max(val_list))[0].tolist()
+        hintable = np.where(np.array(val_list)==max(val_list, default=0))[0].tolist()
         ind = hintable[random.randint(0,len(hintable)-1)]
         if val_list[ind] > max_n['points']: # if better then last found
             max_n['player'] = s
@@ -261,7 +264,7 @@ def chooseCardToHint(state,playerHand,hint_memory):
 
         key_list=list(scores[s]['colors'].keys()) #all colors
         val_list=list(scores[s]['colors'].values()) #all points
-        hintable = np.where(np.array(val_list)==max(val_list))[0].tolist()
+        hintable = np.where(np.array(val_list)==max(val_list, default=0))[0].tolist()
         ind = hintable[random.randint(0,len(hintable)-1)]
         if val_list[ind] > max_c['points']: # if better then last found
             max_c['player'] = s

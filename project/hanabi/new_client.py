@@ -1,7 +1,7 @@
 from sys import argv, stdout
 from threading import Thread
 
-from sympy import continued_fraction_periodic
+#from sympy import continued_fraction_periodic
 import GameData
 import socket
 from constants import *
@@ -181,10 +181,11 @@ def manageInput():
                         for c in p.hand:
                             if c.id not in [i.id for i in hands_memory[p.name] if i.id==c.id]:
                                 # hint_memory[p.name] -> lista di hint
-                                color_hints = [i['color'] for i in hint_memory[p.name] if i=='color']
-                                value_hints = [i['value'] for i in hint_memory[p.name] if i=='value']
+                                color_hints = [i for i in hint_memory[p.name] if list(i.keys())[0]=='color']
+                                value_hints = [i for i in hint_memory[p.name] if list(i.keys())[0]=='value']
                                 hint_memory[p.name] = list(filter(lambda x : x!=c.color, color_hints))
                                 hint_memory[p.name] = hint_memory[p.name] + list(filter(lambda x : x!=c.value, value_hints))
+                                print("HINT MEMORY: ", hint_memory)
 
             # update other players' hand knowledge
             for p in data.players:
@@ -379,8 +380,8 @@ def manageInput():
                                         for c in p.hand:
                                             if c.id not in [i.id for i in hands_memory[p.name] if i.id==c.id]:
                                                 # hint_memory[p.name] -> lista di hint
-                                                color_hints = [i for i in hint_memory[p.name] if i=='color']
-                                                value_hints = [i for i in hint_memory[p.name] if i=='value']
+                                                color_hints = [i for i in hint_memory[p.name] if list(i.keys())[0]=='color']
+                                                value_hints = [i for i in hint_memory[p.name] if list(i.keys())[0]=='value']
                                                 hint_memory[p.name] = list(filter(lambda x : x['color']!=c.color, color_hints))
                                                 hint_memory[p.name] = hint_memory[p.name] + list(filter(lambda x : x['value']!=c.value, value_hints))
 

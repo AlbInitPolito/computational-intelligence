@@ -176,8 +176,8 @@ def chooseCardToHint(state,playerHand,hint_memory):
             if i not in color_hints:
                 temp_cols[i] = 0
 
-        numbs = list(filter(lambda x : x not in value_hints, numbs))
-        cols = list(filter(lambda x : x not in color_hints, cols))
+        #numbs = list(filter(lambda x : x not in value_hints, numbs))
+        #cols = list(filter(lambda x : x not in color_hints, cols))
 
         numbs = temp_numbs
         cols = temp_cols
@@ -256,20 +256,22 @@ def chooseCardToHint(state,playerHand,hint_memory):
         key_list=list(scores[s]['numbers'].keys()) #all numbers
         val_list=list(scores[s]['numbers'].values()) #all points
         hintable = np.where(np.array(val_list)==max(val_list, default=0))[0].tolist()
-        ind = hintable[random.randint(0,len(hintable)-1)]
-        if val_list[ind] > max_n['points']: # if better then last found
-            max_n['player'] = s
-            max_n['points'] = val_list[ind] #associated points
-            max_n['value'] = key_list[ind] # extracted number
+        if len(hintable)>0:
+            ind = hintable[random.randint(0,len(hintable)-1)]
+            if val_list[ind] > max_n['points']: # if better then last found
+                max_n['player'] = s
+                max_n['points'] = val_list[ind] #associated points
+                max_n['value'] = key_list[ind] # extracted number
 
         key_list=list(scores[s]['colors'].keys()) #all colors
         val_list=list(scores[s]['colors'].values()) #all points
         hintable = np.where(np.array(val_list)==max(val_list, default=0))[0].tolist()
-        ind = hintable[random.randint(0,len(hintable)-1)]
-        if val_list[ind] > max_c['points']: # if better then last found
-            max_c['player'] = s
-            max_c['points'] = val_list[ind] #associated points
-            max_c['color'] = key_list[ind] # extracted color
+        if len(hintable)>0 :
+            ind = hintable[random.randint(0,len(hintable)-1)]
+            if val_list[ind] > max_c['points']: # if better then last found
+                max_c['player'] = s
+                max_c['points'] = val_list[ind] #associated points
+                max_c['color'] = key_list[ind] # extracted color
 
     if max_n['player'] == None and max_c['player'] == None:
         return None

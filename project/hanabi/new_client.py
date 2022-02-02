@@ -185,7 +185,7 @@ def manageInput():
                                 value_hints = [i for i in hint_memory[p.name] if list(i.keys())[0]=='value']
                                 hint_memory[p.name] = list(filter(lambda x : x!=c.color, color_hints))
                                 hint_memory[p.name] = hint_memory[p.name] + list(filter(lambda x : x!=c.value, value_hints))
-                                print("HINT MEMORY: ", hint_memory)
+                                #print("HINT MEMORY: ", hint_memory)
 
             # update other players' hand knowledge
             for p in data.players:
@@ -227,7 +227,12 @@ def manageInput():
                     move = input() # must be play, hint or discard
                     while move not in ['play', 'hint', 'discard'] or (move=='hint' and data.usedNoteTokens==8) \
                                                     or (move=='discard' and data.usedNoteTokens==0):
-                        print("you must specify only play, hint or discard!")
+                        if move=='hint' and data.usedNoteTokens==8:
+                            print("You don't have note tokens!")
+                        elif move=='discard' and data.usedNoteTokens==0:
+                            print("You are full of note tokens!")
+                        else:
+                            print("you must specify only play, hint or discard!")
                         move = input()
                     move = ['play', 'hint', 'discard'].index(move)
                 else: #if training or simply playin, choose move from q-table
@@ -235,7 +240,7 @@ def manageInput():
                     canFold = True
                     if data.usedNoteTokens==8 or ck.chooseCardToHint(data,memory,hint_memory) == None:
                         canHint = False
-                    elif data.usedNoteTokens==0:
+                    if data.usedNoteTokens==0:
                         canFold = False
                     if not canHint and not canFold:
                         move = 0
@@ -305,6 +310,9 @@ def manageInput():
                         value = hint['color']
                         t = 'color'
                     hint = {'player': hint['player'], 'value': value, 'type': t} 
+
+                    if training != 'self' or verbose:
+                        print("Hinting to: "+str(hint['player'])+" "+str(t)+": "+str(value))
 
                     if hint['player'] not in hint_memory:
                         hint_memory[data.destination] = []

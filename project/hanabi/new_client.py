@@ -158,7 +158,7 @@ def manageInput():
                 print("Ready for a new game!")
                 print()
             stdout.flush()
-            break
+            return
 
         # facciamo sempre uno show per 1) sapere se tocca a noi 2) se tocca a noi, aggiornare gli stati
         s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
@@ -227,6 +227,10 @@ def manageInput():
                     print("Storm tokens used: " + str(data.usedStormTokens) + "/3")
                     print()
                     print("[" + playerName + " - " + status + "]: ", end="")
+                    print()
+                    print("Owned cards:")
+                    for i in memory: #print our memory
+                        print(i.toClientString())
                 #else:
                 #    print("TOKENS: ", 8-data.usedNoteTokens)
 
@@ -234,6 +238,8 @@ def manageInput():
 
                 #choose a move
                 if training == 'pre': # if pre-training, input the move
+                    print()
+                    print("[" + playerName + " - " + status + "]: ", end="")
                     move = input() # must be play, hint or discard
                     while move not in ['play', 'hint', 'discard'] or (move=='hint' and data.usedNoteTokens==8) \
                                                     or (move=='discard' and data.usedNoteTokens==0):
@@ -294,7 +300,7 @@ def manageInput():
                             print("Ready for a new game!")
                             print()
                         stdout.flush()
-                        break
+                        return
 
                     #update memory
                     played_card = memory.pop(card_index)
@@ -322,6 +328,8 @@ def manageInput():
                         value = hint['color']
                         t = 'color'
                     hint = {'player': hint['player'], 'value': value, 'type': t} 
+
+                    print("Hint: "+str(t)+" "+str(value)+" to player: "+str(hint['player']))
 
                     if training != 'self' or verbose:
                         print("Hinting to: "+str(hint['player'])+" "+str(t)+": "+str(value))
@@ -373,13 +381,31 @@ def manageInput():
                                         memory[i].value = data.value
                                     else:
                                         memory[i].color = data.value
+                                if training != 'self' or verbose:
+                                    print()
+                                    print("Owned cards:")
+                                    for i in memory: #print our memory
+                                        print(i.toClientString())
                             else:
                                 for i in data.positions:
                                     if data.destination not in hint_memory:
                                         hint_memory[data.destination] = []
                                     if {data.type: data.value} not in hint_memory[data.destination]:
                                         hint_memory[data.destination].append({data.type: data.value})
-
+                        elif type(data) is GameData.ServerGameOver:
+                            if data.score > 0 and training=='self':
+                                print("AFTER ",count)
+                            if data.score > 0 or training!='self':
+                                print()
+                                print(data.message)
+                                print(data.score)
+                                print(data.scoreMessage)
+                            if training != 'self' and training != 'pre':
+                                print("Ready for a new game!")
+                                print()
+                            stdout.flush()
+                            return
+                        
                         if type(data) is not GameData.ServerGameStateData:
                             s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
                             continue
@@ -443,6 +469,20 @@ def manageInput():
 
                 # dopo il primo round, possiamo iniziare ad aggiornare la Q-table
                 index = next_index
+
+        elif type(data) is GameData.ServerGameOver:
+            if data.score > 0 and training=='self':
+                print("AFTER ",count)
+            if data.score > 0 or training!='self':
+                print()
+                print(data.message)
+                print(data.score)
+                print(data.scoreMessage)
+            if training != 'self' and training != 'pre':
+                print("Ready for a new game!")
+                print()
+            stdout.flush()
+            return
 
         # se lo show è stato richiesto ma è stato perso, lo richiediamo
         elif requested_show:

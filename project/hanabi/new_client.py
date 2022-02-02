@@ -14,6 +14,7 @@ import select
 
 training = 'no'
 verbose = True
+count = 0
 
 if len(argv) < 4:
     print("You need the player name to start the game.")
@@ -62,6 +63,9 @@ def manageInput():
     global move
     global hint_memory
     global next_index
+    global count
+
+    count += 1
 
     hint_memory = {}
 
@@ -143,14 +147,16 @@ def manageInput():
                 print()
         
         elif type(data) is GameData.ServerGameOver:
-            qp.updateQTable(next_index,next_index,0,-50,0,0.9)
-            print()
-            print(data.message)
-            print(data.score)
-            print(data.scoreMessage)
+            if data.score > 0 and training=='self':
+                print("AFTER ",count)
+            if data.score > 0 or training!='self':
+                print()
+                print(data.message)
+                print(data.score)
+                print(data.scoreMessage)
             if training != 'self' and training != 'pre':
                 print("Ready for a new game!")
-            print()
+                print()
             stdout.flush()
             break
 
@@ -277,14 +283,16 @@ def manageInput():
                             print("OH NO! The Gods are unhappy with you!")
                             print("Current player: " + data.player)
                     elif type(data) is GameData.ServerGameOver:
-                        qp.updateQTable(next_index,next_index,0,-50,0,0.9)
-                        print()
-                        print(data.message)
-                        print(data.score)
-                        print(data.scoreMessage)
+                        if data.score > 0 and training=='self':
+                            print("AFTER ",count)
+                        if data.score > 0 or training!='self':
+                            print()
+                            print(data.message)
+                            print(data.score)
+                            print(data.scoreMessage)
                         if training != 'self' and training != 'pre':
                             print("Ready for a new game!")
-                        print()
+                            print()
                         stdout.flush()
                         break
 

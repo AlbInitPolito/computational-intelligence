@@ -9,11 +9,11 @@ class card:
         self.color = color
 
 albo_hand = [card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None)]
-steo_hand = [card(0,1,'white'),card(0,5,'yellow'),card(0,1,'red'),card(0,2,'yellow'),card(0,2,'white')]
+steo_hand = [card(0,2,'blue'),card(0,4,'red'),card(0,1,'yellow'),card(0,4,'blue'),card(0,4,'blue')]
 tableCards = {
           'red': [],
-          'blue': [],
-          'yellow': [card(0, 1, 'yellow')],
+          'blue': [card(0,1,'blue')],
+          'yellow': [],
           'green': [],
           'white': [],
           }
@@ -26,7 +26,7 @@ class player:
         self.hand = hand
 
 players = [ player('albo',[]), player('steo',steo_hand) ]
-memory = [card(0, 1, 'white'), card(0, 5, None), card(0, 1, None), card(0, 0, None), card(0, 0, 'white')]
+memory = [card(0, 1, None), card(0, 0, None), card(0, 0, None), card(0, 1, None), card(0, 1, None)]
 
 class state:
     def __init__(self, tableCards, players, discardPile, currentPlayer, usedNoteTokens, usedStormTokens):
@@ -39,7 +39,9 @@ class state:
 
 act_state = state(tableCards,players,discardPile, 'albo', 4, 0)
 
-print(ck.chooseCardToPlay(act_state, memory))
+
+print(ck.chooseCardToPlay(act_state,memory))
+#print(ck.chooseCardToPlay(act_state, memory))
 
 
 

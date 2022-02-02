@@ -231,6 +231,7 @@ def manageInput():
                     print("Owned cards:")
                     for i in memory: #print our memory
                         print(i.toClientString())
+                    print()
                 #else:
                 #    print("TOKENS: ", 8-data.usedNoteTokens)
 

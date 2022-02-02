@@ -29,6 +29,8 @@ import game
 def checkPlayedOne(state,playerHand): # check if there is a known 1 card that has never been played
     for c in playerHand:
         if c.value==1:
+            if len([i for i in state.tableCards if len(state.tableCards[i])>0])==0:
+                    return True
             if c.color==None:
                 continue
             if len(state.tableCards[c.color])==0:
@@ -130,24 +132,24 @@ def getQrow(state,playerHand): #gives an integer corresponding to the T-table ro
 
 def chooseCardToPlay(state,playerHand): #return card index to play
     score = [0,0,0,0,0]
-    for c in playerHand:
-        if c.value!=0:
+    for c in range(len(playerHand)):
+        if playerHand[c].value!=0:
             for color in state.tableCards:
-                if max([i.value for i in state.tableCards[color]],default=0) == (c.value-1):
-                    score[playerHand.index(c)] += 1
-                    if color==c.color:
-                        score[playerHand.index(c)] += 5
-        if c.color!=None:
-            if len(state.tableCards[c.color])==0:
-                score[playerHand.index(c)] += 1 
+                if max([i.value for i in state.tableCards[color]],default=0) == (playerHand[c].value-1):
+                    score[c] += 1
+                    if color==playerHand[c].color:
+                        score[c] += 5
+        if playerHand[c].color!=None:
+            if len(state.tableCards[playerHand[c].color])==0:
+                score[c] += 1 
         for p in state.players:
             if p.name == state.currentPlayer:
                 continue
             for d in p.hand: #each card in player p hand
-                if d.value==c.value+1 and d.color==c.color:
-                    score[playerHand.index(c)] += 1
-        if c.value==1:
-            score[playerHand.index(c)] += 1
+                if d.value==playerHand[c].value+1 and d.color==playerHand[c].color:
+                    score[c] += 1
+        if playerHand[c].value==1:
+            score[c] += 1
 
     best = max(score)
     npscore = np.array(score)
@@ -252,6 +254,8 @@ def chooseCardToHint(state,playerHand,hint_memory):
             if c.value == 5:
                 if c.value not in value_hints[p.name]:
                     scores[p.name]['numbers'][c.value] += 5
+            if c.value not in value_hints[p.name]:
+                scores[p.name]['numbers'][c.value] += 5-c.value
 
     max_n = {'player': None, 'value': 0, 'points': 0}
     max_c = {'player': None, 'color': None, 'points': 0}
@@ -299,47 +303,47 @@ def chooseCardToHint(state,playerHand,hint_memory):
 
 def chooseCardToDiscard(state, playerHand):
     score = [0,0,0,0,0]
-    for c in playerHand:
-        if c.value!=0 and c.color!=None:
-            dupCheck = [i for i in playerHand if i.value==c.value and i.color==c.color]
-            if (len(dupCheck) >= 2) or max([i.value for i in state.tableCards[c.color]], default=0) >= c.value:
-                score[playerHand.index(c)] += 10
-            if (len([i for i in state.discardPile if i.color==c.color and i.value==c.value]) >0 and c.value!=1):
-                score[playerHand.index(c)] -= 10
-            if (len([i for i in state.discardPile if i.color==c.color and i.value==c.value]) >1 and c.value==1):
-                score[playerHand.index(c)] -= 10
+    for c in range(len(playerHand)):
+        if playerHand[c].value!=0 and playerHand[c].color!=None:
+            dupCheck = [i for i in playerHand if i.value==playerHand[c].value and i.color==playerHand[c].color]
+            if (len(dupCheck) >= 2) or max([i.value for i in state.tableCards[playerHand[c].color]], default=0) >= playerHand[c].value:
+                score[c] += 10
+            if (len([i for i in state.discardPile if i.color==playerHand[c].color and i.value==playerHand[c].value]) >0 and playerHand[c].value!=1):
+                score[c] -= 10
+            if (len([i for i in state.discardPile if i.color==playerHand[c].color and i.value==playerHand[c].value]) >1 and playerHand[c].value==1):
+                score[c] -= 10
             for p in state.players:
                 chk = 0
                 if (p.name == state.currentPlayer):
                     continue
                 for d in p.hand:
-                    if (d.value == c.value+1 and d.color == c.color): 
-                        score[playerHand.index(c)] -= 1
+                    if (d.value == playerHand[c].value+1 and d.color == playerHand[c].color): 
+                        score[c] -= 1
                         chk += 1
-                    if (d.value == c.value and d.color == c.color):
-                        score[playerHand.index(c)] += 1
+                    if (d.value == playerHand[c].value and d.color == playerHand[c].color):
+                        score[c] += 1
                         chk += 1
                 if (chk > 1): #if both conditions above met, break the entire cycle
                     break
             #check if number n-1 with the same color on the table
-            if (c.color == None):
+            if (playerHand[c].color == None):
                 for color in state.tableCards:
-                    if (max([i.value for i in state.tableCards[color]], default=0) == (c.value-1)):
-                        score[playerHand.index(c)] -= 1
-            elif (max([i.value for i in state.tableCards[c.color]], default=0) == (c.value-1)):
-                score[playerHand.index(c)] -= 5
-        if c.color != None:
-            if (len(state.tableCards[c.color]) > 0):
-                score[playerHand.index(c)] -= 1
-        elif c.value == 1:
-            score[playerHand.index(c)] -= 1 
-        if c.color!=None:
-            if len(state.tableCards[c.color])==0:
-                score[playerHand.index(c)] -= 1 
-        if c.value==5:
-            score[playerHand.index(c)] -= 10
-        if c.color==None and c.value==0:
-            score[playerHand.index(c)] -= 5
+                    if (max([i.value for i in state.tableCards[color]], default=0) == (playerHand[c].value-1)):
+                        score[c] -= 1
+            elif (max([i.value for i in state.tableCards[playerHand[c].color]], default=0) == (playerHand[c].value-1)):
+                score[c] -= 5
+        if playerHand[c].color != None:
+            if (len(state.tableCards[playerHand[c].color]) > 0):
+                score[c] -= 1
+        elif playerHand[c].value == 1:
+            score[c] -= 1 
+        if playerHand[c].color!=None:
+            if len(state.tableCards[playerHand[c].color])==0:
+                score[c] -= 1 
+        if playerHand[c].value==5:
+            score[c] -= 10
+        if playerHand[c].color==None and playerHand[c].value==0:
+            score[c] -= 5
 
     best = max(score)
     npscore = np.array(score)

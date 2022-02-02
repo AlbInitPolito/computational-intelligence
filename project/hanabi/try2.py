@@ -1,4 +1,4 @@
-import checks
+import checks as ck
 import numpy as np
 import Qprocess as qp
 
@@ -9,11 +9,11 @@ class card:
         self.color = color
 
 albo_hand = [card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None)]
-steo_hand = [card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None),card(0,0,None)]
+steo_hand = [card(0,1,'white'),card(0,5,'yellow'),card(0,1,'red'),card(0,2,'yellow'),card(0,2,'white')]
 tableCards = {
           'red': [],
           'blue': [],
-          'yellow': [],
+          'yellow': [card(0, 1, 'yellow')],
           'green': [],
           'white': [],
           }
@@ -26,6 +26,7 @@ class player:
         self.hand = hand
 
 players = [ player('albo',[]), player('steo',steo_hand) ]
+memory = [card(0, 1, 'white'), card(0, 5, None), card(0, 1, None), card(0, 0, None), card(0, 0, 'white')]
 
 class state:
     def __init__(self, tableCards, players, discardPile, currentPlayer, usedNoteTokens, usedStormTokens):
@@ -36,5 +37,9 @@ class state:
         self.usedNoteTokens=usedNoteTokens
         self.usedStormTokens=usedStormTokens
 
-act_state = state(tableCards,players,discardPile, 'albo', 0, 0)
+act_state = state(tableCards,players,discardPile, 'albo', 4, 0)
+
+print(ck.chooseCardToPlay(act_state, memory))
+
+
 

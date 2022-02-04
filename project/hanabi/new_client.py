@@ -117,7 +117,7 @@ def manageInput():
         # intercettiamo gli hint per non perderli
         data = GameData.GameData.deserialize(data)
         if type(data) is GameData.ServerHintData:
-            if training != 'self' and training != 'pre':
+            if training != 'self' or verbose:
                 print("Hint type: " + data.type)
                 print("Player " + data.destination + " cards with value " + str(data.value) + " are:")
                 for i in data.positions:
@@ -147,14 +147,15 @@ def manageInput():
                 print()
         
         elif type(data) is GameData.ServerGameOver:
-            if data.score > 0 and training=='self':
-                print("AFTER ",count)
             if data.score > 0 or training!='self':
                 print()
                 print(data.message)
                 print(data.score)
                 print(data.scoreMessage)
-            if training != 'self' and training != 'pre':
+            if data.score > 0 and training=='self':
+                print("AFTER ",count)
+                count = 0
+            if training != 'self' or verbose:
                 print("Ready for a new game!")
                 print()
             stdout.flush()
@@ -281,23 +282,24 @@ def manageInput():
                     #collect the reward
                     if type(data) is GameData.ServerPlayerMoveOk:
                         reward = 10
-                        if training not in ['pre', 'self']:
+                        if training != 'self' or verbose:
                             print("Nice move!")
                             print("Current player: " + data.player)
                     elif type(data) is GameData.ServerPlayerThunderStrike:
                         reward = -20
-                        if training not in ['pre', 'self']:
+                        if training != 'self' or verbose:
                             print("OH NO! The Gods are unhappy with you!")
                             print("Current player: " + data.player)
                     elif type(data) is GameData.ServerGameOver:
-                        if data.score > 0 and training=='self':
-                            print("AFTER ",count)
                         if data.score > 0 or training!='self':
                             print()
                             print(data.message)
                             print(data.score)
                             print(data.scoreMessage)
-                        if training != 'self' and training != 'pre':
+                        if data.score > 0 and training=='self':
+                            print("AFTER ",count)
+                            count = 0
+                        if training != 'self' or verbose:
                             print("Ready for a new game!")
                             print()
                         stdout.flush()
@@ -305,7 +307,7 @@ def manageInput():
 
                     #update memory
                     played_card = memory.pop(card_index)
-                    if training not in ['pre', 'self']:
+                    if training != 'self' or verbose:
                         print("Playing card in position ", card_index)
                         if not played_card.color:
                             played_card.color = 'Unknown'
@@ -392,14 +394,15 @@ def manageInput():
                                     if {data.type: data.value} not in hint_memory[data.destination]:
                                         hint_memory[data.destination].append({data.type: data.value})
                         elif type(data) is GameData.ServerGameOver:
-                            if data.score > 0 and training=='self':
-                                print("AFTER ",count)
                             if data.score > 0 or training!='self':
                                 print()
                                 print(data.message)
                                 print(data.score)
                                 print(data.scoreMessage)
-                            if training != 'self' and training != 'pre':
+                            if data.score > 0 and training=='self':
+                                print("AFTER ",count)
+                                count = 0
+                            if training != 'self' or verbose:
                                 print("Ready for a new game!")
                                 print()
                             stdout.flush()
@@ -439,7 +442,7 @@ def manageInput():
                     #pass data, discarded_card, known_discarded_card, old_memory
                     reward = ck.computeDiscardReward(data,discarded_card,known_discarded_card,old_memory)
 
-                    if training not in ['pre', 'self']:
+                    if training != 'self' or verbose:
                         print("Discarding card in position ", discard_index)
                         if not known_discarded_card.color:
                             known_discarded_card.color = 'Unknown'
@@ -470,14 +473,15 @@ def manageInput():
                 index = next_index
 
         elif type(data) is GameData.ServerGameOver:
-            if data.score > 0 and training=='self':
-                print("AFTER ",count)
             if data.score > 0 or training!='self':
                 print()
                 print(data.message)
                 print(data.score)
                 print(data.scoreMessage)
-            if training != 'self' and training != 'pre':
+            if data.score > 0 and training=='self':
+                print("AFTER ",count)
+                count = 0
+            if training != 'self' or verbose:
                 print("Ready for a new game!")
                 print()
             stdout.flush()

@@ -61,9 +61,7 @@ scores_window = []
 
 old_mean = 0
 
-path = "outputs/phase_0/"
-
-def manageInput():
+def manageInput(path,qtablename):
     global status
     global training
     global reward
@@ -89,7 +87,7 @@ def manageInput():
 
     Qtable = False
     while not Qtable:
-        Qtable = qp.loadQTableFromFile() # list of size (256,3)
+        Qtable = qp.loadQTableFromFile(path+qtablename) # list of size (256,3)
 
     memory = [ game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None) ] # known cards -> 5 card 
 
@@ -178,13 +176,6 @@ def manageInput():
                 window.append(1)
             else:
                 window.append(0)
-
-            med = round(sum(window)/len(window),4)*100
-            score_med = round(sum(scores_window)/len(scores_window),2)
-            if count2!=0 and count%50==0 and playerName=='alb':
-                qp.saveQTableAsFile(Qtable, path+"Q-table_"+str(med)+"_"+str(score_med)+".npy")
-                print(count)
-            old_mean = med
 
             '''
             if count==10:
@@ -276,7 +267,7 @@ def manageInput():
 
                 if not first_round:
                     if training  in ['pre', 'self']:
-                        qp.updateQTable(index,next_index,move,reward)
+                        qp.updateQTable(index,next_index,move,reward,0,0,path+qtablename)
                         reward = 0
                 
                 #choose a move
@@ -352,12 +343,6 @@ def manageInput():
                         else:
                             window.append(0)
 
-                        med = round(sum(window)/len(window),4)*100
-                        score_med = round(sum(scores_window)/len(scores_window),2)
-                        if count2!=0 and count%50==0 and playerName=='alb':
-                            qp.saveQTableAsFile(Qtable, path+"Q-table_"+str(med)+"_"+str(score_med)+".npy")
-                            print(count)
-                        old_mean = med
                         
                         '''
                         if count==10:
@@ -480,12 +465,7 @@ def manageInput():
             else:
                 window.append(0)
 
-            med = round(sum(window)/len(window),4)*100
-            score_med = round(sum(scores_window)/len(scores_window),2)
-            if count2!=0 and count%50==0 and playerName=='alb':
-                qp.saveQTableAsFile(Qtable, path+"Q-table_"+str(med)+"_"+str(score_med)+".npy")
-                print(count)
-            old_mean = med
+
             
             '''
             if count==10:
@@ -542,7 +522,22 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print("[" + playerName + " - " + status + "]: ", end="")
     print()
 
-    while True:
-        manageInput()
-        if count2==1000:
-            break
+    path = "outputs/phase_0/"
+    directory = os.fsencode(path)
+
+    for file in os.listdir(directory):
+        filename = os.fsdecode(file)
+        count2 = 0
+        window = []
+        scores_window = []
+        while True:
+            manageInput(path,filename)
+            if count2%50==0:
+                print("ITERATION :",count2)
+                print("FILE: ",filename)
+            if count2==1000:
+                med = round(sum(window)/len(window),4)*100
+                score_med = round(sum(scores_window)/len(scores_window),2)
+                print("WON PERC: ",med)
+                print("SCORE MEAN: ",score_med)
+                break

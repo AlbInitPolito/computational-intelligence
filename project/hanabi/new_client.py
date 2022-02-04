@@ -147,14 +147,16 @@ def manageInput():
                 print()
         
         elif type(data) is GameData.ServerGameOver:
-            if data.score > 0 or training!='self':
+            #if data.score > 0 or training!='self':
+            if training=='self':
                 print()
                 print(data.message)
                 print(data.score)
                 print(data.scoreMessage)
-            if data.score > 0 and training=='self':
+            #if data.score > 0 and training=='self':
+            if training=='self':
                 print("AFTER ",count)
-                count = 0
+                #count = 0
             if training != 'self' or verbose:
                 print("Ready for a new game!")
                 print()
@@ -296,14 +298,16 @@ def manageInput():
                             print("OH NO! The Gods are unhappy with you!")
                             print("Current player: " + data.player)
                     elif type(data) is GameData.ServerGameOver:
-                        if data.score > 0 or training!='self':
+                        #if data.score > 0 or training!='self':
+                        if training=='self':
                             print()
                             print(data.message)
                             print(data.score)
                             print(data.scoreMessage)
-                        if data.score > 0 and training=='self':
+                        #if data.score > 0 and training=='self':
+                        if training=='self':
                             print("AFTER ",count)
-                            count = 0
+                            #count = 0
                         if training != 'self' or verbose:
                             print("Ready for a new game!")
                             print()
@@ -399,14 +403,16 @@ def manageInput():
                 index = next_index
 
         elif type(data) is GameData.ServerGameOver:
-            if data.score > 0 or training!='self':
+            #if data.score > 0 or training!='self':
+            if training=='self':
                 print()
                 print(data.message)
                 print(data.score)
                 print(data.scoreMessage)
-            if data.score > 0 and training=='self':
+            #if data.score > 0 and training=='self':
+            if training=='self':
                 print("AFTER ",count)
-                count = 0
+                #count = 0
             if training != 'self' or verbose:
                 print("Ready for a new game!")
                 print()

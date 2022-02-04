@@ -238,6 +238,11 @@ def manageInput():
 
                 next_index = ck.getQrow(data,memory) #update for previous play depends on its state and the new state
 
+                if not first_round:
+                    if training  in ['pre', 'self']:
+                        qp.updateQTable(index,next_index,move,reward)
+                        reward = 0
+                
                 #choose a move
                 if training == 'pre': # if pre-training, input the move
                     print()
@@ -362,85 +367,9 @@ def manageInput():
                     known_discarded_card = memory.pop(discard_index) #retrieve informations on discarded card
                     memory.append(game.Card(0,0,None))
 
-                    s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
-                    requested_show = True
-                    # richiediamo uno show
-                    # se non riceviamo uno show, ed è un hint, salviamo
-                    # in ogni caso, rimaniamo nel while
-                    while requested_show:
-                        data = s.recv(DATASIZE)
-                        if not data:
-                            s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
-                            requested_show = True
-                            continue
-                        # intercettiamo gli hint per non perderli
-                        data = GameData.GameData.deserialize(data)
-                        if type(data) is GameData.ServerHintData:
-                            if data.destination == playerName: #if hint is for us, update our memory
-                                for i in data.positions:
-                                    if data.type =='value':
-                                        memory[i].value = data.value
-                                    else:
-                                        memory[i].color = data.value
-                                if training != 'self' or verbose:
-                                    print()
-                                    print("Owned cards:")
-                                    for i in memory: #print our memory
-                                        print(i.toClientString())
-                            else:
-                                for i in data.positions:
-                                    if data.destination not in hint_memory:
-                                        hint_memory[data.destination] = []
-                                    if {data.type: data.value} not in hint_memory[data.destination]:
-                                        hint_memory[data.destination].append({data.type: data.value})
-                        elif type(data) is GameData.ServerGameOver:
-                            if data.score > 0 or training!='self':
-                                print()
-                                print(data.message)
-                                print(data.score)
-                                print(data.scoreMessage)
-                            if data.score > 0 and training=='self':
-                                print("AFTER ",count)
-                                count = 0
-                            if training != 'self' or verbose:
-                                print("Ready for a new game!")
-                                print()
-                            stdout.flush()
-                            return
-                        
-                        if type(data) is not GameData.ServerGameStateData:
-                            s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
-                            continue
-                        else: # check last discard pile card
-                            requested_show = False
-                            if len(data.discardPile)==0:
-                                return
-                            discarded_card = data.discardPile[-1]
-                            
-                            for p in data.players:
-                                if p.name not in hint_memory:
-                                    hint_memory[p.name] = []
-
-                            if hands_memory:
-                                #update other players' hint memory
-                                for p in data.players:
-                                    if p.name != playerName:
-                                        for c in p.hand:
-                                            if c.id not in [i.id for i in hands_memory[p.name] if i.id==c.id]:
-                                                # hint_memory[p.name] -> lista di hint
-                                                color_hints = [i for i in hint_memory[p.name] if list(i.keys())[0]=='color']
-                                                value_hints = [i for i in hint_memory[p.name] if list(i.keys())[0]=='value']
-                                                hint_memory[p.name] = list(filter(lambda x : x['color']!=c.color, color_hints))
-                                                hint_memory[p.name] = hint_memory[p.name] + list(filter(lambda x : x['value']!=c.value, value_hints))
-
-                            # update other players' hand knowledge
-                            for p in data.players:
-                                if p.name != playerName:
-                                    hands_memory[p.name] = p.hand.copy()
-
                     #obtain the reward
-                    #pass data, discarded_card, known_discarded_card, old_memory
-                    reward = ck.computeDiscardReward(data,discarded_card,known_discarded_card,old_memory)
+                    #pass data, discarded_card, old_memory
+                    reward = ck.computeDiscardReward(data,known_discarded_card,old_memory)
 
                     if training != 'self' or verbose:
                         print("Discarding card in position ", discard_index)
@@ -465,9 +394,6 @@ def manageInput():
                 #print("MOVE: ", move)
                 #print("REWARD: ", reward)
                 #print()
-                if training  in ['pre', 'self']:
-                    qp.updateQTable(index,next_index,move,reward)
-                    reward = 0
 
                 # dopo il primo round, possiamo iniziare ad aggiornare la Q-table
                 index = next_index

@@ -351,43 +351,51 @@ def chooseCardToDiscard(state, playerHand):
     ind = random.randint(0,len(playable)-1)
     return playable[ind]
 
-def computeDiscardReward(state,card,known_card,playerHand):
+def computeDiscardReward(state,known_card,playerHand):
     reward = 0
-    if len(state.tableCards[card.color]) == 0:
-        last = game.Card(0,0,card.color)
-    else:
-        last = state.tableCards[card.color][-1]
-    if last.value >= card.value:
-        reward += 3
-    elif last.value == card.value-1:
-        reward -= 3
-    else:
-        reward -= 1
-    discarded_cards = [i for i in state.discardPile if i.color == card.color and i.value == card.value]
-    if card.value == 1 and len(discarded_cards) == 3:
+
+    if known_card.color and known_card.value: #se conosciamo la carta interamente
+        if len(state.tableCards[known_card.color]) == 0: #se il colore per terra non è stato giocato
+            last = game.Card(0,0,known_card.color) #la carta vale zero
+        else:
+            last = state.tableCards[known_card.color][-1] #valore maggiore giocato
+        if last.value >= known_card.value: #la nostra carta è inutile, buono
+            reward += 5
+        elif last.value == known_card.value-1: #se la nostra carta è immediatamente successiva, male
+            reward -= 5
+        else: #la nostra carta potrebbe essere utile in futuro
+            reward -= 2
+    
+        discarded_cards = [i for i in state.discardPile if i.color == known_card.color and i.value == known_card.value]
+        if known_card.value == 1 and len(discarded_cards) == 2: # solo tre carte uno per ogni colore
+            reward -= 10
+        elif len(discarded_cards)==1 and known_card.value != 1: # le altre mai scartarle entrambe!
+            reward -= 10
+
+    if known_card.value == 5: #MAI scartare un 5
         reward -= 10
-    elif len(discarded_cards)==2 and card.value != 1:
-        reward -= 10
-    if card.value == 5:
-        reward -= 10
-    if known_card.color == None:
-        reward -= 1
+    if known_card.color == None: # togliere due punti per ogni informazione sconosciuta sulla carta
+        reward -= 2
     if known_card.value == 0:
-        reward -= 1
-    # used tokens: (1 2 3 4 5 6 7 8 -> -1 0 1 2 3 4 5 6)
-    reward += state.usedNoteTokens-2
-    complete = [i for i in playerHand if i.color and i.value]
+        reward -= 2
+
+    # used tokens: (1 2 3 4 5 6 7 8 -> -2 -1 0 1 2 3 4 5)
+    reward += state.usedNoteTokens-3 # aggiungere punti se molti token rimasti
+
+    complete = [i for i in playerHand if i.color and i.value] # valutare solo le carte giocabili in mano
     add_reward = 0
     for i in complete:
         if len(state.tableCards[i.color]) == 0:
             last = game.Card(0,0,i.color)
         else:
             last = state.tableCards[i.color][-1]
-        if last.value == i.value-1:
-            add_reward -= 10
+        if last.value == i.value-1: # se troviamo una carta giocabile in mano:
+            add_reward = -10
             break
-    if not add_reward:
+    if not add_reward: # se nessuna carta giocabile conosciuta in mano
         reward += 3
+    else:
+        reward += add_reward
     
     return reward
 

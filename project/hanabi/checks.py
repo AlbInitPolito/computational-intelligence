@@ -257,6 +257,21 @@ def chooseCardToHint(state,playerHand,hint_memory):
             if c.value not in value_hints[p.name]:
                 scores[p.name]['numbers'][c.value] += 5-c.value
 
+            # cercare in hint_memory l'hint dello stesso valore di c
+            search_value_hint = [h for h in hint_memory[p.name] if 'value' in h and h['value'] == c.value ]
+            # cercare in hint_memory l'hint dello stesso colore di c
+            search_color_hint = [h for h in hint_memory[p.name] if 'color' in h and h['color'] == c.color ]
+            # se ci sono entrambi, nulla
+            if len(search_value_hint) > 0 and len(search_color_hint) > 0:
+                continue
+            # se c'è il colore -> +10 al valore
+            if len(search_value_hint) > 0:
+                scores[p.name]['colors'][c.color] += 10
+            # elif c'è il valore -> +10 al colore
+            elif len(search_color_hint) > 0:
+                scores[p.name]['numbers'][c.value] += 10
+
+
     max_n = {'player': None, 'value': 0, 'points': 0}
     max_c = {'player': None, 'color': None, 'points': 0}
 
@@ -375,9 +390,9 @@ def computeDiscardReward(state,known_card,playerHand):
     if known_card.value == 5: #MAI scartare un 5
         reward -= 10
     if known_card.color == None: # togliere due punti per ogni informazione sconosciuta sulla carta
-        reward -= 2
+        reward -= 10
     if known_card.value == 0:
-        reward -= 2
+        reward -= 10
 
     # used tokens: (1 2 3 4 5 6 7 8 -> -2 -1 0 1 2 3 4 5)
     reward += state.usedNoteTokens-3 # aggiungere punti se molti token rimasti

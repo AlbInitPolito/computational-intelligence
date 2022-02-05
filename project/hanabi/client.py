@@ -35,7 +35,6 @@ def manageInput():
 
     hint_memory = {}    # memory of hints to other players
     hands_memory = {}   # memory of other players
-    first_round = True  # to verify if it is the first round
 
     memory = [ game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None) ] # known cards -> 5 card 
     requested_show = False  # if there isn't info about show, we have to wait to receive it

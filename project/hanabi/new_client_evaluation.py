@@ -15,6 +15,7 @@ import select
 training = 'no'
 verbose = True
 count = 0
+count2 = 0
 
 if len(argv) < 4:
     print("You need the player name to start the game.")
@@ -30,6 +31,7 @@ else:
     port = int(argv[2])
     training = ''
     if len(argv) >= 5:
+        #attiva una modalità di training o meno
         training = argv[4]
         # 'pre' for pretraining, take actions as keyboard input, but update q-table
         # 'self' for self q-learning, choose actions from q-table and update q-table
@@ -54,13 +56,12 @@ reward = 0
 index = -1
 next_index = -1
 
-path = './first/Q_table_9.56_0.0.npy'
-folder = './first/best100'
-alpha = 0.1
-gamma = 1
-after50 = True
+window = []
+scores_window = []
 
-def manageInput():
+old_mean = 0
+
+def manageInput(path,qtablename):
     global status
     global training
     global reward
@@ -69,10 +70,13 @@ def manageInput():
     global hint_memory
     global next_index
     global count
-    global path
-    global after50
+    global window
+    global scores_window
+    global count2
+    global old_mean
 
     count += 1
+    count2 += 1
 
     hint_memory = {}
 
@@ -80,7 +84,11 @@ def manageInput():
 
     run = True
     first_round = True
-        
+
+    Qtable = False
+    while not Qtable:
+        Qtable = qp.loadQTableFromFile(path+qtablename) # list of size (256,3)
+
     memory = [ game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None) ] # known cards -> 5 card 
 
     # serve a tornare nell'if di show se non vengono ricevute le info di show dopo averle richieste
@@ -91,11 +99,6 @@ def manageInput():
     # show inutile: ci serve solo per attivare la prima volta s.recv
     s.send(GameData.ClientGetGameStateRequest(playerName).serialize())
     requested_show = True
-
-    if training not in ['pre','self']:
-        Qtable = False
-        while not Qtable:
-            Qtable = qp.loadQTableFromFile(path) # list of size (256,3)
 
     while run:
 
@@ -155,17 +158,32 @@ def manageInput():
                 print()
         
         elif type(data) is GameData.ServerGameOver:
+            '''
             if data.score > 0 or training!='self':
                 print()
                 print(data.message)
                 print(data.score)
                 print(data.scoreMessage)
-            if data.score > 0 and training=='self':
-                print("AFTER ",count)
-                count = 0
+                #print("AFTER ",count2)
+                #count2 = 0
             if training != 'self' or verbose:
                 print("Ready for a new game!")
                 print()
+            '''
+            scores_window.append(data.score)
+            if data.score>0:
+                window.append(1)
+            else:
+                window.append(0)
+
+            '''
+            if count==10:
+                count = 0
+                med = round(sum(window)/len(window),4)*100
+                print("MEDIA MOBILE ("+str(len(window))+"):", med)
+                #print("SCORE: ",data.score)
+            '''
+
             stdout.flush()
             return
 
@@ -204,6 +222,7 @@ def manageInput():
                                 #print("VALUE HINTS: ", value_hints)
                                 hint_memory[p.name] = list(filter(lambda x : x['color']!=c.color, color_hints))
                                 hint_memory[p.name] = hint_memory[p.name] + list(filter(lambda x : x['value']!=c.value, value_hints))
+                                #print("HINT MEMORY AFTER: ", hint_memory)
 
             # update other players' hand knowledge
             for p in data.players:
@@ -247,7 +266,7 @@ def manageInput():
 
                 if not first_round:
                     if training  in ['pre', 'self']:
-                        qp.updateQTable(index,next_index,move,reward, gamma, alpha, path)
+                        qp.updateQTable(index,next_index,move,reward,0,0,path+qtablename)
                         reward = 0
                 
                 #choose a move
@@ -275,10 +294,6 @@ def manageInput():
                     if not canHint and not canFold:
                         move = 0
                     else:
-                        if training in ['pre','self']:
-                            Qtable = False
-                            while not Qtable:
-                                Qtable = qp.loadQTableFromFile(path) # list of size (256,3)
                         move = qp.readQTable(Qtable,next_index,canHint,canFold)
                         if move not in [0,1,2]:
                             print("move error: ", move)
@@ -307,19 +322,37 @@ def manageInput():
                             print("OH NO! The Gods are unhappy with you!")
                             print("Current player: " + data.player)
                     elif type(data) is GameData.ServerGameOver:
+                        '''
                         if data.score > 0 or training!='self':
                             print()
                             print(data.message)
                             print(data.score)
                             print(data.scoreMessage)
-                        if data.score > 0 and training=='self':
-                            print("AFTER ",count)
-                            count = 0
+                            #print("AFTER ",count2)
+                            #count2 = 0
                         if training != 'self' or verbose:
                             print("Ready for a new game!")
                             print()
+                        '''
+
+                        scores_window.append(data.score)
+                        if data.score>0:
+                            window.append(1)
+                        else:
+                            window.append(0)
+
+                        
+                        '''
+                        if count==10:
+                            count = 0
+                            med = round(sum(window)/len(window),4)*100
+                            print("MEDIA MOBILE ("+str(len(window))+"):", med)
+                            #print("SCORE: ",data.score)
+                        '''
+
                         stdout.flush()
                         return
+
 
                     #update memory
                     played_card = memory.pop(card_index)
@@ -399,22 +432,46 @@ def manageInput():
                 if first_round:
                     first_round = False
                     continue
+                        
+                # index, next_index, reward, move
+                #print()
+                #print("MOVE: ", move)
+                #print("REWARD: ", reward)
+                #print()
 
                 # dopo il primo round, possiamo iniziare ad aggiornare la Q-table
                 index = next_index
 
         elif type(data) is GameData.ServerGameOver:
+            '''
             if data.score > 0 or training!='self':
                 print()
                 print(data.message)
                 print(data.score)
                 print(data.scoreMessage)
-            if data.score > 0 and training=='self':
-                print("AFTER ",count)
-                count = 0
+                #print("AFTER ",count2)
+                #count2 = 0
             if training != 'self' or verbose:
                 print("Ready for a new game!")
                 print()
+            '''
+
+            scores_window.append(data.score)
+            if data.score>0:
+                window.append(1)
+            else:
+                window.append(0)
+
+
+            
+            '''
+            if count==10:
+                count = 0
+                med = round(sum(window)/len(window),4) *100
+                print("MEDIA MOBILE ("+str(len(window))+"):", med)
+                #print("SCORE: ",data.score)
+            '''
+
             stdout.flush()
             return
 
@@ -462,5 +519,22 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print("[" + playerName + " - " + status + "]: ", end="")
     print()
 
-    while True:
-        manageInput()
+    path = "outputs/phase_0/"
+    directory = os.fsencode(path)
+
+    for file in os.listdir(directory):
+        filename = os.fsdecode(file)
+        count2 = 0
+        window = []
+        scores_window = []
+        while True:
+            manageInput(path,filename)
+            if count2%50==0:
+                print("ITERATION :",count2)
+                print("FILE: ",filename)
+            if count2==1000:
+                med = round(sum(window)/len(window),4)*100
+                score_med = round(sum(scores_window)/len(scores_window),2)
+                print("WON PERC: ",med)
+                print("SCORE MEAN: ",score_med)
+                break

@@ -10,6 +10,7 @@ import game
 
 training = ''
 verbose = False
+save = False
 count = 0
 
 if len(argv) < 4:
@@ -28,13 +29,19 @@ else:
         # 'pre' for pretraining, take actions as keyboard input, but update q-table
         # 'self' for self q-learning, choose actions from q-table and update q-table
         # anything else for just playing, don't update q-table
-    if len(argv) == 6:
+    if len(argv) >= 6:
         verbose = argv[5]
-        if verbose == 'no':
-            verbose = False
-        else:
+        if verbose == 'verbose':
             verbose = True
-        
+        else:
+            verbose = False
+    if len(argv) >= 7:
+        save = argv[6]
+        if save == 'save':
+            save = True
+        else:
+            save = False
+                
 statuses = ["Lobby", "Game", "GameHint"]
 status = statuses[0]
 
@@ -58,7 +65,6 @@ def manageInput():
     global move
     global next_index
     global count
-    global window
     global path
     global defaultPlayer
     global after50
@@ -68,14 +74,16 @@ def manageInput():
     hands_memory = {}   # to store the memory about the own cards
     first_round = True  # to verify if it is the first round
     memory = [ game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None), game.Card(0,0,None) ] # known cards -> 5 card 
-        
+
+    if training not in ['pre','self']:
+        Qtable = False
+        while not Qtable:
+            Qtable = qp.loadQTableFromFile(path) # list of size (256,3)
+
     s.send(GameData.ClientGetGameStateRequest(playerName).serialize())      # first show to activate the s.recv(...)
     requested_show = True   # to verify if it was requested a show
 
     while True:
-        Qtable = False
-        while not Qtable:
-            Qtable = qp.loadQTableFromFile(path) # list of size (256,3), loading the Q-table at each round
         data = s.recv(DATASIZE)
         
         if not data:    # verify if the data is correct
@@ -112,18 +120,18 @@ def manageInput():
                 print()
                 print("[" + playerName + " - " + status + "]: ", end="")
                 print()
-        
+
         elif type(data) is GameData.ServerGameOver:     # verify if the game is over
             window.append(data.score)                   # append the score about the game
             if len(window) <= 1000 and len(window)%50 == 0 and len(window) != 0:   
                 mean = round(sum(window)/len(window), 2)
                 rate0 = round(len([i for i in window if i == 0])/len(window)*100, 2)
                 print("MEAN: ", mean, " LENGTH: ", len(window), " ZERO PERCENTAGE: ", rate0)       # print the mean about the scores and the percentage of bad games
-                if (playerName == 'steo'):      # save the Q-table only if the player is the default one
+                if (playerName == defaultPlayer and save):      # save the Q-table only if the player is the default one
                     if (after50):
-                        qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q_table_'+str(mean)+'_'+str(rate0))
+                        qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q-table_'+str(mean)+'_'+str(rate0))
                     elif (len(window) == 1000):
-                        qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q_table_'+str(mean)+'_'+str(rate0))
+                        qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q-table_'+str(mean)+'_'+str(rate0))
             if training != 'self':
                 print()
                 print(data.message)
@@ -233,7 +241,11 @@ def manageInput():
                     if not canHint and not canFold:
                         move = 0
                     else:
-                        move = qp.readQTable(Qtable, next_index, canHint, canFold)
+                        if training in ['pre','self']:
+                            Qtable = False
+                            while not Qtable:
+                                Qtable = qp.loadQTableFromFile(path) # list of size (256,3)
+                        move = qp.readQTable(Qtable, next_index, canHint,canFold)
                         if move not in [0,1,2]:
                             print("Move error: ", move)
                             exit
@@ -266,11 +278,11 @@ def manageInput():
                             mean = round(sum(window)/len(window), 2)
                             rate0 = round(len([i for i in window if i == 0])/len(window)*100, 2)
                             print("MEAN: ", mean, " LENGTH: ", len(window), " ZERO PERCENTAGE: ", rate0)
-                            if (playerName == 'steo'):
+                            if (playerName == defaultPlayer and save):
                                 if (after50):
-                                    qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q_table_'+str(mean)+'_'+str(rate0))
+                                    qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q-table_'+str(mean)+'_'+str(rate0))
                                 elif (len(window) == 1000):
-                                    qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q_table_'+str(mean)+'_'+str(rate0))
+                                    qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q-table_'+str(mean)+'_'+str(rate0))
                         if training!='self':
                             print()
                             print(data.message)
@@ -354,7 +366,6 @@ def manageInput():
                 if first_round:     # check if it is the first round
                     first_round = False
                     continue
-                        
                 index = next_index  # after the first round we can update the Q-table
 
         elif type(data) is GameData.ServerGameOver:     # check if the game is over
@@ -363,12 +374,12 @@ def manageInput():
                 mean = round(sum(window)/len(window), 2)
                 rate0 = round(len([i for i in window if i == 0])/len(window)*100, 2)
                 print("MEAN: ", mean, " LENGTH: ", len(window), " ZERO PERCENTAGE: ", rate0)
-                if (playerName == 'steo'):
+                if (playerName == defaultPlayer and save):
                     if (after50):
-                        qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q_table_'+str(mean)+'_'+str(rate0))
+                        qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q-table_'+str(mean)+'_'+str(rate0))
                     elif (len(window) == 1000):
-                        qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q_table_'+str(mean)+'_'+str(rate0))
-            if training!='self':
+                        qp.saveQTableAsFile(qp.loadQTableFromFile(path), folder+'/Q-table_'+str(mean)+'_'+str(rate0))
+            if training != 'self':
                 print()
                 print(data.message)
                 print(data.score)
@@ -425,5 +436,5 @@ with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as s:
     print("[" + playerName + " - " + status + "]: ", end="")
     print()
 
-    while True and len(window) < 1000:
+    while True and not (len(window) > 1000 and save):
         manageInput()

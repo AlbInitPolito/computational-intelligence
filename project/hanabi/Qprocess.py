@@ -47,10 +47,7 @@ def updateQTable(index, nextIndex, action, reward, gamma=0, alpha=1, path='Q-tab
     while not Q:
         Q = loadQTableFromFile(path)
     Qnext = max(Q[nextIndex]) # value of best next action
-    #actual = Q[index].copy()
     Q[index][action] = round((1-alpha)*Q[index][action] + alpha*(reward + gamma*Qnext),2) # update Q
-    #if len([i for i,j in zip(actual,Q[index]) if i==j])==3:
-    #    print("DIDN'T UPDATE!!!!!!!!!!!!!!!!!!")
     outcome = False
     while not outcome:
         outcome = saveQTableAsFile(Q, path)
@@ -61,5 +58,5 @@ def printQTable(path='Q-table.npy'):
 
 
 if __name__ == "__main__":
-    QTableFrom0()
+    #QTableFrom0()
     printQTable()

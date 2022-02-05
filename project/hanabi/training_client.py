@@ -56,7 +56,6 @@ index = -1
 next_index = -1
 
 window = []
-
 path = './first/Q_table_9.56_0.0.npy'
 folder = './first/best100'
 alpha = 0.1
@@ -75,7 +74,6 @@ def manageInput():
     global window
     global path
     global after50
-
 
     count += 1
 
@@ -176,7 +174,6 @@ def manageInput():
             #if data.score > 0 and training=='self':
             #    print("AFTER ",count)
             #    count = 0
-
             if training != 'self' or verbose:
                 print("Ready for a new game!")
                 print()
@@ -289,11 +286,6 @@ def manageInput():
                     if not canHint and not canFold:
                         move = 0
                     else:
-                        if training in ['self','pre']:
-                            Qtable = False
-                            while not Qtable:
-                                Qtable = qp.loadQTableFromFile() # list of size (256,3)
-                        
                         move = qp.readQTable(Qtable,next_index,canHint,canFold)
                         if move not in [0,1,2]:
                             print("move error: ", move)

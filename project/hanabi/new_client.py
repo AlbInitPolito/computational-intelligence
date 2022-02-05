@@ -55,6 +55,8 @@ reward = 0
 index = -1
 next_index = -1
 
+window = []
+
 def manageInput():
     global status
     global training
@@ -64,6 +66,12 @@ def manageInput():
     global hint_memory
     global next_index
     global count
+    global window
+
+    if training not in ['self','pre']:
+        Qtable = False
+        while not Qtable:
+            Qtable = qp.loadQTableFromFile() # list of size (256,3)
 
     count += 1
 
@@ -147,6 +155,16 @@ def manageInput():
                 print()
         
         elif type(data) is GameData.ServerGameOver:
+            
+            '''
+            if training == 'self':
+                if len(window)==200:
+                    window.pop(0)
+                window.append(data.score)
+                mov = round(sum(window)/len(window),2)
+                print("MEDIA MOBILE ("+str(len(window))+"): "+str(mov))
+            '''
+            
             if data.score > 0 or training!='self':
                 print()
                 print(data.message)
@@ -155,6 +173,7 @@ def manageInput():
             if data.score > 0 and training=='self':
                 print("AFTER ",count)
                 count = 0
+
             if training != 'self' or verbose:
                 print("Ready for a new game!")
                 print()
@@ -268,6 +287,11 @@ def manageInput():
                     if not canHint and not canFold:
                         move = 0
                     else:
+                        if training in ['self','pre']:
+                            Qtable = False
+                            while not Qtable:
+                                Qtable = qp.loadQTableFromFile() # list of size (256,3)
+                        
                         move = qp.readQTable(Qtable,next_index,canHint,canFold)
                         if move not in [0,1,2]:
                             print("move error: ", move)
@@ -296,6 +320,15 @@ def manageInput():
                             print("OH NO! The Gods are unhappy with you!")
                             print("Current player: " + data.player)
                     elif type(data) is GameData.ServerGameOver:
+                        if training == 'self':
+
+                            '''
+                            if len(window)==200:
+                                window.pop(0)
+                            window.append(data.score)
+                            mov = round(sum(window)/len(window),2)
+                            print("MEDIA MOBILE ("+str(len(window))+"): "+str(mov))
+                            '''
                         if data.score > 0 or training!='self':
                             print()
                             print(data.message)
@@ -304,6 +337,7 @@ def manageInput():
                         if data.score > 0 and training=='self':
                             print("AFTER ",count)
                             count = 0
+                        
                         if training != 'self' or verbose:
                             print("Ready for a new game!")
                             print()
@@ -399,6 +433,14 @@ def manageInput():
                 index = next_index
 
         elif type(data) is GameData.ServerGameOver:
+            if training == 'self':
+                '''
+                if len(window)==200:
+                    window.pop(0)
+                window.append(data.score)
+                mov = round(sum(window)/len(window),2)
+                print("MEDIA MOBILE ("+str(len(window))+"): "+str(mov))
+                '''
             if data.score > 0 or training!='self':
                 print()
                 print(data.message)
@@ -407,6 +449,7 @@ def manageInput():
             if data.score > 0 and training=='self':
                 print("AFTER ",count)
                 count = 0
+                
             if training != 'self' or verbose:
                 print("Ready for a new game!")
                 print()

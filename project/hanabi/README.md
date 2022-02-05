@@ -41,6 +41,7 @@ Arguments:
 + PlayerName: the name of the player
 
 Commands for client:
+The client is automatic. These commands could be used on **old_client.py**
 
 + exit: exit from the game
 + ready: set your status to ready (lobby only)
@@ -49,3 +50,7 @@ Commands for client:
   + type: 'color' or 'value'
   + destinatary: name of the person you want to ask the hint to
 + discard \<num>: discard the card *num* (\[0-4]) from your hand
+
+## Students
+- Alberto Castrignanò, s281689
+- Stefano Rainò, s282436
